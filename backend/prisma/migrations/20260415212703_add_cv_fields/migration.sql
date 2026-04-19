@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "cvFileName" TEXT;
+ALTER TABLE "User" ADD COLUMN "cvKeywords" TEXT;
+ALTER TABLE "User" ADD COLUMN "cvSummary" TEXT;
+ALTER TABLE "User" ADD COLUMN "cvText" TEXT;
+ALTER TABLE "User" ADD COLUMN "cvUpdatedAt" DATETIME;

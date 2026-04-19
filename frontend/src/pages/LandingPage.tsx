@@ -90,6 +90,7 @@ export default function LandingPage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (
               <FeatureCard
+                key={feature.title}
                 icon={feature.icon}
                 title={feature.title}
                 description={feature.description}
@@ -166,11 +167,11 @@ export default function LandingPage() {
                 <Sparkles className="h-4 w-4 text-primary-foreground" />
               </div>
               <span className="text-lg font-bold text-foreground">
-                CVMatch<span className="text-primary">AI</span>
+                Opti<span className="text-primary">Job</span>
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              2026 CVMatchAI. All rights reserved.
+              2026 OptiJob. All rights reserved.
             </p>
           </div>
         </div>

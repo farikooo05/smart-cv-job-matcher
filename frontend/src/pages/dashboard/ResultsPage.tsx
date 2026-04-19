@@ -1,9 +1,10 @@
-import { useContext } from "react";
-import { DashboardHeader } from "../../components/DashboardHeader";
-import { ScoreCircle } from "../../components/ScoreCircle";
-import { SkillTag } from "../../components/SkillTag";
-import { SuggestionCard } from "../../components/SuggestionCard";
-import { Button } from "../../components/ui/button";
+import { useEffect, useState } from "react"
+import { useParams, Link } from "react-router-dom"
+import { DashboardHeader } from "../../components/DashboardHeader"
+import { ScoreCircle } from "../../components/ScoreCircle"
+import { SkillTag } from "../../components/SkillTag"
+import { SuggestionCard } from "../../components/SuggestionCard"
+import { Button } from "../../components/ui/button"
 import {
   Download,
   Share2,
@@ -14,22 +15,83 @@ import {
   CheckCircle2,
   XCircle,
   BarChart3,
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import { AppContext } from "../../App";
+  Loader2,
+} from "lucide-react"
+import { analysisService, type AnalysisResult } from "../../services/analysis.service"
+import { toast } from "sonner"
+import { AlertTriangle, Info } from "lucide-react"
 
 export default function ResultsPage() {
+  const { id } = useParams<{ id: string }>()
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const { GeminiResponse } = useContext(AppContext);
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      if (!id) return
+
+      try {
+        const data = await analysisService.getById(id)
+        setAnalysis(data.analysis)
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to load analysis")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchAnalysis()
+  }, [id])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading analysis...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!analysis) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="mb-4 text-lg text-muted-foreground">Analysis not found</p>
+          <Link to="/dashboard/analyze">
+            <Button className="gap-2 bg-primary hover:bg-primary/90">
+              <RefreshCw className="h-4 w-4" />
+              Start New Analysis
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader
         title="Analysis Results"
-        description="Senior Software Engineer Position"
+        description={`${analysis.jobTitle} at ${analysis.company}`}
       />
 
       <div className="p-6">
+        {/* Fallback Notification Banner */}
+        {!analysis.isAiAnalysis && (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-warning/30 bg-warning/5 p-4 text-warning">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-semibold">Basic Match (AI Optimized)</p>
+              <p className="text-sm opacity-90">
+                The AI engine is currently reaching its free tier limit. This result was generated using our 
+                local keyword-matching engine. You can re-analyze this CV later for deeper AI insights.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <Button variant="outline" size="sm" className="gap-2">
@@ -53,14 +115,14 @@ export default function ResultsPage() {
           <div className="lg:col-span-1">
             <div className="rounded-2xl border border-border/50 bg-card p-6 text-center">
               <h2 className="mb-6 text-lg font-semibold text-foreground">Match Score</h2>
-              <ScoreCircle score={GeminiResponse ? GeminiResponse.compatibilityScore : 0} size="lg" />
+              <ScoreCircle score={analysis.compatibilityScore} size="lg" />
               <div className="mt-6 grid grid-cols-2 gap-4">
                 <div className="rounded-xl bg-success/10 p-3">
-                  <p className="text-2xl font-bold text-success">{GeminiResponse ? GeminiResponse.matchingSkills.length : 0}</p>
+                  <p className="text-2xl font-bold text-success">{analysis.matchingSkills.length}</p>
                   <p className="text-xs text-muted-foreground">Matched Skills</p>
                 </div>
                 <div className="rounded-xl bg-destructive/10 p-3">
-                  <p className="text-2xl font-bold text-destructive">{GeminiResponse ? GeminiResponse.missingRequirements.length : 0}</p>
+                  <p className="text-2xl font-bold text-destructive">{analysis.missingRequirements.length}</p>
                   <p className="text-xs text-muted-foreground">Missing Skills</p>
                 </div>
               </div>
@@ -87,11 +149,11 @@ export default function ResultsPage() {
                   <CheckCircle2 className="h-4 w-4 text-success" />
                   <h3 className="font-medium text-foreground">Matching Skills</h3>
                   <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
-                    {GeminiResponse ? GeminiResponse.matchingSkills.length : 0} found
+                    {analysis.matchingSkills.length} found
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {GeminiResponse?.matchingSkills.map((skill) => (
+                  {analysis.matchingSkills.map((skill) => (
                     <SkillTag key={skill} skill={skill} type="matched" />
                   ))}
                 </div>
@@ -103,11 +165,11 @@ export default function ResultsPage() {
                   <XCircle className="h-4 w-4 text-destructive" />
                   <h3 className="font-medium text-foreground">Missing Skills</h3>
                   <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
-                    {GeminiResponse ? GeminiResponse.missingRequirements.length : 0} missing
+                    {analysis.missingRequirements.length} missing
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {GeminiResponse?.missingRequirements.map((skill) => (
+                  {analysis.missingRequirements.map((skill) => (
                     <SkillTag key={skill} skill={skill} type="missing" />
                   ))}
                 </div>
@@ -121,14 +183,18 @@ export default function ResultsPage() {
           <div className="rounded-2xl border border-border/50 bg-card p-6">
             <div className="mb-6 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold text-foreground">AI Suggestions</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                {analysis.isAiAnalysis ? "AI Suggestions" : "System Suggestions"}
+              </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
-              {GeminiResponse ? GeminiResponse.suggestions.map((suggestion, index) => (
-                <SuggestionCard key={index} {...suggestion} />
-              )) : 
-              <p className="text-muted-foreground italic">No suggestions available at this time.</p>
-              }
+              {analysis.suggestions.length > 0 ? (
+                analysis.suggestions.map((suggestion, index) => (
+                  <SuggestionCard key={index} {...suggestion} />
+                ))
+              ) : (
+                <p className="text-muted-foreground italic">No suggestions available at this time.</p>
+              )}
             </div>
           </div>
         </div>
@@ -149,8 +215,8 @@ export default function ResultsPage() {
                 </div>
                 <div className="rounded-xl border border-border bg-secondary/30 p-4">
                   <div className="flex flex-wrap gap-2">
-                    {GeminiResponse ? GeminiResponse.cvKeywords.map((keyword) => {
-                      const isMatched = GeminiResponse?.jdKeywords.includes(keyword);
+                    {analysis.cvKeywords.map((keyword) => {
+                      const isMatched = analysis.jdKeywords.includes(keyword)
                       return (
                         <span
                           key={keyword}
@@ -162,10 +228,8 @@ export default function ResultsPage() {
                         >
                           {keyword}
                         </span>
-                      );
-                    }) : 
-                    <p className="text-muted-foreground text-sm">Upload a resume to extract keywords.</p>
-                    }
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -178,8 +242,8 @@ export default function ResultsPage() {
                 </div>
                 <div className="rounded-xl border border-border bg-secondary/30 p-4">
                   <div className="flex flex-wrap gap-2">
-                    {GeminiResponse ? GeminiResponse.jdKeywords.map((keyword) => {
-                      const isMatched = GeminiResponse?.cvKeywords.includes(keyword);
+                    {analysis.jdKeywords.map((keyword) => {
+                      const isMatched = analysis.cvKeywords.includes(keyword)
                       return (
                         <span
                           key={keyword}
@@ -191,10 +255,8 @@ export default function ResultsPage() {
                         >
                           {keyword}
                         </span>
-                      );
-                    }) : 
-                    <p className="text-muted-foreground text-sm">Waiting for job description analysis...</p>
-                    }
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -217,7 +279,20 @@ export default function ResultsPage() {
             </div>
           </div>
         </div>
+
+        {/* Summary */}
+        <div className="mt-6">
+          <div className="rounded-2xl border border-border/50 bg-card p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">
+                {analysis.isAiAnalysis ? "AI Summary" : "Analysis Summary"}
+              </h2>
+            </div>
+            <p className="leading-relaxed text-muted-foreground">{analysis.summary}</p>
+          </div>
+        </div>
       </div>
     </div>
-  );
+  )
 }

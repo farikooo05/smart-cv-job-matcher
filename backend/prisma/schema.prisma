@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String     @id @default(cuid())
+  name       String
+  email      String     @unique
+  password   String?
+  avatar     String?
+  provider   String     @default("email")
+  providerId String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  
+  // CV Profile fields
+  cvFileName String?
+  cvText     String?
+  cvKeywords  String? // JSON array of primary keywords
+  cvSkillsMultilingual String? // JSON array of {en, az, ru} skill objects
+  cvSummary   String?
+  cvUpdatedAt DateTime?
+
+  analyses   Analysis[]
+  jobMatches JobMatch[]
+
+  @@index([email])
+}
+
+model Analysis {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle            String
+  company             String
+  jobDescription      String
+  cvFileName          String
+  compatibilityScore  Int
+  matchedSkillsCount  Int
+  missingSkillsCount  Int
+  cvKeywords          String
+  jdKeywords          String
+  matchingSkills      String
+  missingRequirements String
+  suggestions         String
+  summary             String
+  isAiAnalysis        Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Job {
+  id          String     @id @default(cuid())
+  title       String
+  company     String
+  location    String?
+  url         String     @unique
+  source      String // "glorri", "jobsearch", "busy"
+  description String?
+  salary      String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  matches     JobMatch[]
+
+  @@index([createdAt])
+}
+
+model JobMatch {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId               String
+  job                 Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  score               Int
+  summary             String?
+  matchingSkills      String?
+  missingRequirements String?
+  notified            Boolean  @default(false)
+  isAiAnalysis        Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([createdAt])
+}

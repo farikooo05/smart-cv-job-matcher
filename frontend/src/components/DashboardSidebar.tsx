@@ -1,40 +1,43 @@
-import { Link, useLocation } from "react-router-dom";
-import { cn } from "../lib/utils";
-import { Button } from "../components/ui/button";
+import { Link, useLocation, useNavigate } from "react-router-dom"
+import { cn } from "../lib/utils"
+import { Button } from "../components/ui/button"
 import {
   Sparkles,
   LayoutDashboard,
   FileSearch,
   BarChart3,
   History,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   User,
-  HelpCircle,
-} from "lucide-react";
+  Briefcase,
+} from "lucide-react"
+import { useAuth } from "../contexts/AuthContext"
 
 const mainNavItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/analyze", label: "Analyze CV", icon: FileSearch },
-  { href: "/dashboard/results", label: "Results", icon: BarChart3 },
+  { href: "/dashboard/matches", label: "Recommended Jobs", icon: Briefcase },
+  { href: "/dashboard/profile", label: "My Profile", icon: User },
   { href: "/dashboard/insights", label: "Insights", icon: BarChart3 },
   { href: "/dashboard/history", label: "History", icon: History },
-];
-
-const bottomNavItems = [
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
-  { href: "/dashboard/help", label: "Help & Support", icon: HelpCircle },
-];
+]
 
 interface DashboardSidebarProps {
-  collapsed: boolean;
-  onToggle: () => void;
+  collapsed: boolean
+  onToggle: () => void
 }
 
 export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps) {
-  const location = useLocation();
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    navigate("/login")
+  }
 
   return (
     <aside
@@ -51,13 +54,15 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
           </div>
           {!collapsed && (
             <span className="text-lg font-bold tracking-tight text-sidebar-foreground">
-              CVMatch<span className="text-primary">AI</span>
+              Opti<span className="text-primary">Job</span>
             </span>
           )}
         </Link>
         <button
           onClick={onToggle}
           className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          tabIndex={0}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
@@ -69,7 +74,7 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
           Main Menu
         </div>
         {mainNavItems.map((item) => {
-          const isActive = location.pathname === item.href;
+          const isActive = location.pathname === item.href
           return (
             <Link
               key={item.href}
@@ -86,45 +91,28 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
               <item.icon className="h-5 w-5 shrink-0" />
               {!collapsed && <span>{item.label}</span>}
             </Link>
-          );
+          )
         })}
       </nav>
 
       {/* Bottom Section */}
       <div className="border-t border-border/50 p-3">
-        {bottomNavItems.map((item) => {
-          const isActive = location.pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed && "justify-center px-2"
-              )}
-              title={collapsed ? item.label : undefined}
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-
         {/* User Profile */}
         <div className={cn(
-          "mt-3 flex items-center gap-3 rounded-lg border border-border/50 bg-sidebar-accent/50 p-3",
+          "flex items-center gap-3 rounded-lg border border-border/50 bg-sidebar-accent/50 p-3",
           collapsed && "justify-center p-2"
         )}>
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/20">
-            <User className="h-4 w-4 text-primary" />
+            {user?.avatar ? (
+              <img src={user.avatar} alt={user.name} className="h-9 w-9 rounded-full object-cover" />
+            ) : (
+              <User className="h-4 w-4 text-primary" />
+            )}
           </div>
           {!collapsed && (
             <div className="flex-1 truncate">
-              <p className="truncate text-sm font-medium text-sidebar-foreground">John Doe</p>
-              <p className="truncate text-xs text-muted-foreground">john@example.com</p>
+              <p className="truncate text-sm font-medium text-sidebar-foreground">{user?.name || "User"}</p>
+              <p className="truncate text-xs text-muted-foreground">{user?.email || ""}</p>
             </div>
           )}
           {!collapsed && (
@@ -132,15 +120,15 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-              asChild
+              onClick={handleLogout}
+              aria-label="Log out"
+              tabIndex={0}
             >
-              <Link to="/login">
-                <LogOut className="h-4 w-4" />
-              </Link>
+              <LogOut className="h-4 w-4" />
             </Button>
           )}
         </div>
       </div>
     </aside>
-  );
+  )
 }

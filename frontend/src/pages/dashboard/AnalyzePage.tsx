@@ -1,6 +1,6 @@
-import { DashboardHeader } from "../../components/DashboardHeader";
-import { Button } from "../../components/ui/button";
-import { cn } from "../../lib/utils";
+import { DashboardHeader } from "../../components/DashboardHeader"
+import { Button } from "../../components/ui/button"
+import { cn } from "../../lib/utils"
 import {
   Upload,
   FileText,
@@ -9,83 +9,82 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-} from "lucide-react";
-import { useState, useCallback, type DragEvent, type ChangeEvent, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import getGeminiAnalysis from "../../services/ai-analyzer.services";
-import { AppContext } from "../../App";
+} from "lucide-react"
+import { useState, useCallback, type DragEvent, type ChangeEvent } from "react"
+import { useNavigate } from "react-router-dom"
+import { analysisService } from "../../services/analysis.service"
+import { toast } from "sonner"
 
 export default function AnalyzePage() {
-  const navigate = useNavigate();
-  const [file, setFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [jobDescription, setJobDescription] = useState("");
-  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const { setGeminiResponse } = useContext(AppContext);
+  const navigate = useNavigate()
+  const [file, setFile] = useState<File | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [jobDescription, setJobDescription] = useState("")
+  const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle")
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
+    e.preventDefault()
+    setIsDragging(true)
+  }, [])
 
   const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
 
   const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
+    e.preventDefault()
+    setIsDragging(false)
 
-    const droppedFile = e.dataTransfer.files[0];
+    const droppedFile = e.dataTransfer.files[0]
     if (droppedFile && droppedFile.type === "application/pdf") {
-      setFile(droppedFile);
-      simulateUpload();
+      setFile(droppedFile)
+      simulateUpload()
+    } else {
+      toast.error("Only PDF files are accepted")
     }
-  }, []);
+  }, [])
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
+    const selectedFile = e.target.files?.[0]
     if (selectedFile) {
-      setFile(selectedFile);
-      simulateUpload();
+      setFile(selectedFile)
+      simulateUpload()
+      e.target.value = ""
     }
-  };
+  }
 
   const simulateUpload = () => {
-    setUploadStatus("uploading");
+    setUploadStatus("uploading")
     setTimeout(() => {
-      setUploadStatus("success");
-    }, 1500);
-  };
+      setUploadStatus("success")
+    }, 1500)
+  }
 
   const removeFile = () => {
-    setFile(null);
-    setUploadStatus("idle");
-  };
+    setFile(null)
+    setUploadStatus("idle")
+  }
 
-  const handleAnalyze = async() => {
-    if (!file || !jobDescription.trim()) return;
-    
-    setIsAnalyzing(true);
+  const handleAnalyze = async () => {
+    if (!file || !jobDescription.trim()) return
+
+    setIsAnalyzing(true)
 
     try {
-      const response = await getGeminiAnalysis(file, jobDescription);
-      if(!response) {
-        throw new Error("Failed to receive analysis from Gemini.")
-      }
-      setGeminiResponse(JSON.parse(response));
-
-      navigate("/dashboard/results");
+      const { analysis } = await analysisService.create(file, jobDescription)
+      toast.success("Analysis complete!")
+      navigate(`/dashboard/results/${analysis.id}`)
     } catch (error) {
-      console.error("Analysis failed: ", error);
+      console.error("Analysis failed: ", error)
+      toast.error(error instanceof Error ? error.message : "Analysis failed. Please try again.")
     } finally {
-      setIsAnalyzing(false);
+      setIsAnalyzing(false)
     }
-  };
+  }
 
-  const isReadyToAnalyze = file && jobDescription.trim() && uploadStatus === "success";
+  const isReadyToAnalyze = file && jobDescription.trim() && uploadStatus === "success"
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,7 +99,7 @@ export default function AnalyzePage() {
           {[
             { step: 1, label: "Upload CV", active: true },
             { step: 2, label: "Add Job", active: !!file },
-            { step: 3, label: "Analyze", active: isReadyToAnalyze },
+            { step: 3, label: "Analyze", active: !!isReadyToAnalyze },
           ].map((item, index) => (
             <div key={item.step} className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -165,6 +164,7 @@ export default function AnalyzePage() {
                     accept=".pdf"
                     onChange={handleFileChange}
                     className="absolute inset-0 cursor-pointer opacity-0"
+                    aria-label="Upload CV file"
                   />
                   <Button variant="outline" className="pointer-events-none">
                     Select File
@@ -197,6 +197,8 @@ export default function AnalyzePage() {
                       <button
                         onClick={removeFile}
                         className="rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        aria-label="Remove file"
+                        tabIndex={0}
                       >
                         <X className="h-5 w-5" />
                       </button>
@@ -221,10 +223,10 @@ export default function AnalyzePage() {
               <textarea
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Paste the job description here...
+                placeholder={`Paste the job description here...
 
 Example:
-We are looking for a Senior Software Engineer with 5+ years of experience in React, TypeScript, and Node.js. The ideal candidate should have strong problem-solving skills and experience with cloud services (AWS/GCP)."
+We are looking for a Senior Software Engineer with 5+ years of experience in React, TypeScript, and Node.js. The ideal candidate should have strong problem-solving skills and experience with cloud services (AWS/GCP).`}
                 className="min-h-70 w-full resize-none rounded-xl border border-border bg-secondary/30 p-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
 
@@ -275,5 +277,5 @@ We are looking for a Senior Software Engineer with 5+ years of experience in Rea
         </div>
       </div>
     </div>
-  );
+  )
 }

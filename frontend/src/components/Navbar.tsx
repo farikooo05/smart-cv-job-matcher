@@ -33,7 +33,7 @@ export function Navbar() {
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold tracking-tight text-foreground">
-            CVMatch<span className="text-primary">AI</span>
+            Opti<span className="text-primary">Job</span>
           </span>
         </Link>
 

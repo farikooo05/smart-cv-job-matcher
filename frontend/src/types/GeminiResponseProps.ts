@@ -3,7 +3,7 @@ export interface SuggestionsProps {
     title: string,
     description: string,
     actionLabel: string,
-    actionURL: string
+    actionUrl: string
 }
 
 export interface GeminiResponseProps {

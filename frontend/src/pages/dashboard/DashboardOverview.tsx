@@ -1,20 +1,23 @@
-import { DashboardHeader } from "../../components/DashboardHeader";
-import { ScoreCircle } from "../../components/ScoreCircle";
-import { Button } from "../../components/ui/button";
-import { cn } from "../../lib/utils";
+import { useEffect, useState } from "react"
+import { DashboardHeader } from "../../components/DashboardHeader"
+import { ScoreCircle } from "../../components/ScoreCircle"
+import { Button } from "../../components/ui/button"
+import { cn } from "../../lib/utils"
 import {
   FileSearch,
   BarChart3,
-  TrendingUp,
   Clock,
   ArrowUpRight,
   ChevronRight,
   Sparkles,
   Target,
-  Calendar,
+  TrendingUp,
   Award,
-} from "lucide-react";
-import { Link } from "react-router-dom";
+  Loader2,
+  Bell,
+  CheckCircle2,
+} from "lucide-react"
+import { Link } from "react-router-dom"
 import {
   LineChart,
   Line,
@@ -22,22 +25,9 @@ import {
   YAxis,
   ResponsiveContainer,
   Tooltip,
-} from "recharts";
-
-const recentAnalyses = [
-  { id: 1, title: "Senior Software Engineer", company: "Tech Corp", score: 78, date: "2 days ago" },
-  { id: 2, title: "Full Stack Developer", company: "StartupXYZ", score: 85, date: "4 days ago" },
-  { id: 3, title: "Frontend Engineer", company: "Design Studios", score: 92, date: "1 week ago" },
-];
-
-const progressData = [
-  { date: "Jan", score: 62 },
-  { date: "Feb", score: 68 },
-  { date: "Mar", score: 72 },
-  { date: "Apr", score: 71 },
-  { date: "May", score: 78 },
-  { date: "Jun", score: 78 },
-];
+} from "recharts"
+import { analysisService, type AnalysisListItem, type DashboardStats, type JobMatch } from "../../services/analysis.service"
+import { useAuth } from "../../contexts/AuthContext"
 
 const quickActions = [
   {
@@ -61,24 +51,83 @@ const quickActions = [
     href: "/dashboard/history",
     color: "bg-success/10 text-success",
   },
-];
+]
 
 export default function DashboardOverview() {
+  const { user } = useAuth()
+  const [stats, setStats] = useState<DashboardStats["stats"] | null>(null)
+  const [recentAnalyses, setRecentAnalyses] = useState<AnalysisListItem[]>([])
+  const [recentMatches, setRecentMatches] = useState<JobMatch[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsData, analysesData, matchesData] = await Promise.all([
+          analysisService.getStats(),
+          analysisService.getAll(1, 3),
+          analysisService.getMatches(),
+        ])
+        setStats(statsData.stats)
+        setRecentAnalyses(analysesData.analyses)
+        setRecentMatches(matchesData.matches.slice(0, 5))
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  const scoreChangeText = stats && stats.scoreChange !== 0
+    ? `${stats.scoreChange > 0 ? "+" : ""}${stats.scoreChange}%`
+    : ""
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader
         title="Dashboard"
-        description="Welcome back! Here's an overview of your CV performance."
+        description={`Welcome back${user?.name ? `, ${user.name}` : ""}! Here's an overview of your CV performance.`}
       />
 
       <div className="p-6">
         {/* Stats Overview */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Overall Match", value: "78%", change: "+6%", trend: "up", icon: Target },
-            { label: "Analyses Done", value: "12", change: "+2", trend: "up", icon: Calendar },
-            { label: "Avg Score", value: "72%", change: "+8%", trend: "up", icon: TrendingUp },
-            { label: "Best Match", value: "92%", change: "", trend: "neutral", icon: Award },
+            {
+              label: "Latest Score",
+              value: stats ? `${stats.latestScore}%` : "—",
+              change: scoreChangeText,
+              icon: Target,
+            },
+            {
+              label: "Analyses Done",
+              value: stats ? `${stats.totalAnalyses}` : "0",
+              change: "",
+              icon: TrendingUp,
+            },
+            {
+              label: "Avg Score",
+              value: stats ? `${stats.avgScore}%` : "—",
+              change: "",
+              icon: BarChart3,
+            },
+            {
+              label: "Best Match",
+              value: stats ? `${stats.bestScore}%` : "—",
+              change: "",
+              icon: Award,
+            },
           ].map((stat, index) => (
             <div
               key={index}
@@ -100,34 +149,89 @@ export default function DashboardOverview() {
           ))}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Quick Actions */}
-          <div className="lg:col-span-1">
-            <div className="rounded-2xl border border-border/50 bg-card p-6">
+        {/* Notifications & Quick Actions Section */}
+        <div className="mb-8 grid gap-6 lg:grid-cols-4">
+          {/* Notifications Feed */}
+          <div className="lg:col-span-2">
+            <div className="h-full rounded-2xl border border-border/50 bg-card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                  <Bell className="h-5 w-5 text-primary" />
+                  Notifications
+                </h2>
+                <Link to="/dashboard/matches" className="text-xs text-muted-foreground hover:text-primary">
+                  View all matches
+                </Link>
+              </div>
+              <div className="space-y-4">
+                {recentMatches.length > 0 ? (
+                  recentMatches.map((match) => (
+                    <div key={match.id} className="flex gap-3 text-sm">
+                      <div className="mt-0.5 rounded-full bg-success/10 p-1.5 text-success flex-shrink-0">
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">
+                          New high-match found: <span className="text-primary">{match.job.title}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {match.score}% compatibility at {match.job.company}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-4 text-center">
+                    <CheckCircle2 className="mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p className="text-sm text-muted-foreground">You're all caught up!</p>
+                  </div>
+                )}
+
+                {/* System notification if CV exists */}
+                {user?.cvFileName && (
+                  <div className="flex gap-3 text-sm">
+                    <div className="mt-0.5 rounded-full bg-primary/10 p-1.5 text-primary flex-shrink-0">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Master CV Indexed</p>
+                      <p className="text-xs text-muted-foreground">
+                        Agent is actively monitoring jobs for <span className="italic">{user.cvFileName}</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions Re-integrated */}
+          <div className="lg:col-span-2">
+            <div className="h-full rounded-2xl border border-border/50 bg-card p-6">
               <h2 className="mb-4 text-lg font-semibold text-foreground">Quick Actions</h2>
-              <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 {quickActions.map((action) => (
                   <Link
                     key={action.href}
                     to={action.href}
-                    className="flex items-center gap-4 rounded-xl border border-border/50 bg-secondary/30 p-4 transition-all hover:border-primary/30 hover:bg-secondary/50"
+                    className="flex items-center gap-3 rounded-xl border border-border/50 bg-secondary/30 p-3 transition-all hover:border-primary/30 hover:bg-secondary/50"
                   >
                     <div className={cn("rounded-lg p-2", action.color)}>
-                      <action.icon className="h-5 w-5" />
+                      <action.icon className="h-4 w-4" />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-foreground">{action.title}</p>
-                      <p className="text-sm text-muted-foreground">{action.description}</p>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{action.title}</p>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </Link>
                 ))}
               </div>
             </div>
           </div>
+        </div>
 
+        <div className="grid gap-6 lg:grid-cols-3">
           {/* Progress Chart */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <div className="rounded-2xl border border-border/50 bg-card p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-foreground">Score Progress</h2>
@@ -138,33 +242,39 @@ export default function DashboardOverview() {
                   </Button>
                 </Link>
               </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={progressData}>
-                    <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={12} />
-                    <YAxis stroke="var(--color-muted-foreground)" domain={[0, 100]} fontSize={12} />
-                    <Tooltip
-                      contentStyle={{
-                        background: "var(--color-card)",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "8px",
-                        color: "var(--color-foreground)",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="score"
-                      stroke="var(--color-primary)"
-                      strokeWidth={3}
-                      dot={{ fill: "var(--color-primary)", strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                Your score has improved by <span className="font-medium text-success">+16%</span> over the past 6 months
-              </p>
+              {stats && stats.scoreTrend.length > 0 ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={stats.scoreTrend}>
+                      <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={12} />
+                      <YAxis stroke="var(--color-muted-foreground)" domain={[0, 100]} fontSize={12} />
+                      <Tooltip
+                        contentStyle={{
+                          background: "var(--color-card)",
+                          border: "1px solid var(--color-border)",
+                          borderRadius: "8px",
+                          color: "var(--color-foreground)",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="var(--color-primary)"
+                        strokeWidth={3}
+                        dot={{ fill: "var(--color-primary)", strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex h-64 items-center justify-center">
+                  <div className="text-center">
+                    <BarChart3 className="mx-auto mb-3 h-12 w-12 text-muted-foreground/30" />
+                    <p className="text-muted-foreground">No data yet. Start your first analysis!</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -181,32 +291,47 @@ export default function DashboardOverview() {
                 </Button>
               </Link>
             </div>
-            <div className="space-y-3">
-              {recentAnalyses.map((analysis) => (
-                <Link
-                  key={analysis.id}
-                  to="/dashboard/results"
-                  className="flex items-center justify-between rounded-xl border border-border/50 bg-secondary/30 p-4 transition-all hover:border-primary/30 hover:bg-secondary/50"
-                >
-                  <div className="flex items-center gap-4">
-                    <ScoreCircle score={analysis.score} size="sm" animated={false} />
-                    <div>
-                      <p className="font-medium text-foreground">{analysis.title}</p>
-                      <p className="text-sm text-muted-foreground">{analysis.company}</p>
+            {recentAnalyses.length > 0 ? (
+              <div className="space-y-3">
+                {recentAnalyses.map((analysis) => (
+                  <Link
+                    key={analysis.id}
+                    to={`/dashboard/results/${analysis.id}`}
+                    className="flex items-center justify-between rounded-xl border border-border/50 bg-secondary/30 p-4 transition-all hover:border-primary/30 hover:bg-secondary/50"
+                  >
+                    <div className="flex items-center gap-4">
+                      <ScoreCircle score={analysis.compatibilityScore} size="sm" animated={false} />
+                      <div>
+                        <p className="font-medium text-foreground">{analysis.jobTitle}</p>
+                        <p className="text-sm text-muted-foreground">{analysis.company}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={cn(
-                      "text-lg font-bold",
-                      analysis.score >= 80 ? "text-success" : analysis.score >= 50 ? "text-primary" : "text-destructive"
-                    )}>
-                      {analysis.score}%
-                    </p>
-                    <p className="text-sm text-muted-foreground">{analysis.date}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                    <div className="text-right">
+                      <div className="mb-1 flex items-center justify-end gap-2">
+                        {!analysis.isAiAnalysis && (
+                          <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-bold text-warning ring-1 ring-inset ring-warning/20">
+                            BASIC
+                          </span>
+                        )}
+                        <p className={cn(
+                          "text-lg font-bold",
+                          analysis.compatibilityScore >= 80 ? "text-success" : analysis.compatibilityScore >= 50 ? "text-primary" : "text-destructive"
+                        )}>
+                          {analysis.compatibilityScore}%
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(analysis.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-muted-foreground">No analyses yet. Start your first one!</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -228,5 +353,5 @@ export default function DashboardOverview() {
         </div>
       </div>
     </div>
-  );
+  )
 }
