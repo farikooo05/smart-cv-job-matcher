@@ -19,7 +19,7 @@ import {
 } from "lucide-react"
 import { analysisService, type AnalysisResult } from "../../services/analysis.service"
 import { toast } from "sonner"
-import { AlertTriangle, Info } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 
 export default function ResultsPage() {
   const { id } = useParams<{ id: string }>()

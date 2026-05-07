@@ -8,7 +8,6 @@ import {
   BarChart3,
   Clock,
   ArrowUpRight,
-  ChevronRight,
   Sparkles,
   Target,
   TrendingUp,

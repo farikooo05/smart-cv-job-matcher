@@ -10,7 +10,6 @@ import {
   Briefcase, 
   CheckCircle2, 
   Loader2,
-  Trash2,
   Edit2,
   Check,
   Camera
