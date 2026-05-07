@@ -6,7 +6,6 @@ interface User {
   name: string
   email: string
   avatar: string | null
-  provider: string
   cvFileName?: string
   cvUpdatedAt?: string
 }
@@ -17,7 +16,6 @@ interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
-  loginWithGoogle: (credential: string) => Promise<void>
   logout: () => void
 }
 
@@ -27,7 +25,6 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => {},
   register: async () => {},
-  loginWithGoogle: async () => {},
   logout: () => {},
 })
 
@@ -83,14 +80,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(data.user)
   }
 
-  const loginWithGoogle = async (credential: string) => {
-    const data = await api<AuthResponse>("/api/auth/google", {
-      method: "POST",
-      body: { credential },
-    })
-    setTokens(data.accessToken, data.refreshToken)
-    setUser(data.user)
-  }
 
   const logout = () => {
     clearTokens()
@@ -104,7 +93,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isLoading,
       login,
       register,
-      loginWithGoogle,
       logout,
     }}>
       {children}

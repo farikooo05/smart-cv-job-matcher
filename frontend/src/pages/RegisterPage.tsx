@@ -4,7 +4,6 @@ import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Sparkles, Mail, Lock, User, ArrowRight, Eye, EyeOff, Check } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
-import { GoogleAuthButton } from "../components/GoogleAuthButton"
 import { toast } from "sonner"
 
 export default function RegisterPage() {
@@ -165,16 +164,6 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
-            </div>
-          </div>
-
-          <GoogleAuthButton label="Sign up with Google" />
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {"Already have an account? "}

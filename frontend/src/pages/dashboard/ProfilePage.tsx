@@ -10,7 +10,10 @@ import {
   Briefcase, 
   CheckCircle2, 
   Loader2,
-  Trash2
+  Trash2,
+  Edit2,
+  Check,
+  Camera
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { toast } from "sonner"
@@ -22,23 +25,50 @@ interface UserProfile {
   cvSummary: string | null
   cvKeywords: string[]
   cvUpdatedAt: string | null
+  avatar: string | null
 }
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [isUpdatingName, setIsUpdatingName] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editedName, setEditedName] = useState("")
   const [newSkill, setNewSkill] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const fetchProfile = async () => {
     try {
       const response = await userService.getProfile()
       setProfile(response.user)
+      setEditedName(response.user.name)
     } catch (error) {
       toast.error("Failed to load profile")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleUpdateName = async () => {
+    if (!profile || !editedName.trim() || editedName === profile.name) {
+      setIsEditingName(false)
+      setEditedName(profile?.name || "")
+      return
+    }
+
+    setIsUpdatingName(true)
+    try {
+      await userService.updateProfile({ name: editedName.trim() })
+      setProfile({ ...profile, name: editedName.trim() })
+      toast.success("Name updated successfully")
+      setIsEditingName(false)
+    } catch (error) {
+      toast.error("Failed to update name")
+    } finally {
+      setIsUpdatingName(false)
     }
   }
 
@@ -61,6 +91,29 @@ export default function ProfilePage() {
       toast.error("Failed to upload CV", { id: toastId })
     } finally {
       setIsUploading(false)
+      if (event.target) {
+        event.target.value = ""
+      }
+    }
+  }
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingAvatar(true)
+    const toastId = toast.loading("Updating profile picture...")
+    
+    try {
+      const response = await userService.uploadAvatar(file)
+      if (profile) {
+        setProfile({ ...profile, avatar: response.avatar })
+      }
+      toast.success("Profile picture updated!", { id: toastId })
+    } catch (error: any) {
+      toast.error(error.message || "Failed to upload avatar", { id: toastId })
+    } finally {
+      setIsUploadingAvatar(false)
       if (event.target) {
         event.target.value = ""
       }
@@ -120,11 +173,89 @@ export default function ProfilePage() {
         <div className="lg:col-span-1 space-y-6">
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <div className="flex flex-col items-center text-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <User className="h-10 w-10" />
+              <div 
+                className="group relative flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 text-primary border-4 border-background shadow-xl overflow-hidden cursor-pointer"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {profile?.avatar ? (
+                  <img 
+                    src={profile.avatar} 
+                    alt="Profile" 
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-12 w-12" />
+                )}
+                
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Camera className="h-8 w-8 text-white" />
+                </div>
+                
+                {isUploadingAvatar && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                    <Loader2 className="h-8 w-8 animate-spin text-white" />
+                  </div>
+                )}
               </div>
-              <h2 className="mt-4 text-xl font-bold text-foreground">{profile?.name}</h2>
-              <p className="text-sm text-muted-foreground">{profile?.email}</p>
+              
+              <input
+                type="file"
+                ref={avatarInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                disabled={isUploadingAvatar}
+              />
+              <div className="mt-4 flex flex-col items-center">
+                <div className="group relative flex items-center justify-center w-full">
+                  {isEditingName ? (
+                    <div className="flex flex-col items-center gap-2 w-full px-2">
+                      <input
+                        type="text"
+                        className="w-full rounded-lg border border-primary/30 bg-secondary/50 px-3 py-1.5 text-center text-lg font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        autoFocus
+                        onKeyDown={(e) => e.key === 'Enter' && handleUpdateName()}
+                      />
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-8 w-8 p-0 text-success hover:bg-success/10"
+                          onClick={handleUpdateName}
+                          disabled={isUpdatingName}
+                        >
+                          {isUpdatingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setIsEditingName(false)
+                            setEditedName(profile?.name || "")
+                          }}
+                          disabled={isUpdatingName}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative flex items-center justify-center">
+                      <h2 className="text-xl font-bold text-foreground">{profile?.name}</h2>
+                      <button 
+                        onClick={() => setIsEditingName(true)}
+                        className="absolute -right-8 rounded-full p-1 text-muted-foreground opacity-0 transition-all hover:bg-primary/10 hover:text-primary group-hover:opacity-100"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{profile?.email}</p>
+              </div>
             </div>
           </div>
 

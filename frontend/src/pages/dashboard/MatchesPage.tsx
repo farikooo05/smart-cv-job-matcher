@@ -1,6 +1,22 @@
 import { useEffect, useState } from "react"
 import { analysisService } from "../../services/analysis.service"
-import { Briefcase, MapPin, ExternalLink, Sparkles, Building2, TrendingUp, AlertCircle, Search, RefreshCcw, Trash2 } from "lucide-react"
+import { userService } from "../../services/user.service"
+import { DashboardHeader } from "../../components/DashboardHeader"
+import { 
+  Briefcase, 
+  MapPin, 
+  ExternalLink, 
+  Sparkles, 
+  Building2, 
+  TrendingUp, 
+  AlertCircle, 
+  Search, 
+  RefreshCcw, 
+  Trash2,
+  Clock,
+  Lock,
+  Loader2
+} from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { toast } from "sonner"
@@ -27,11 +43,17 @@ export default function MatchesPage() {
   const [isScraping, setIsScraping] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const fetchMatches = async () => {
     try {
-      const response = await analysisService.getMatches()
-      setMatches(response.matches)
+      const [matchesRes, profileRes] = await Promise.all([
+        analysisService.getMatches(),
+        userService.getProfile()
+      ])
+      setMatches(matchesRes.matches)
+      setLastSyncAt(profileRes.user.lastManualSyncAt)
     } catch (error) {
       console.error("Failed to fetch matches:", error)
       toast.error("Could not load job matches")
@@ -44,16 +66,27 @@ export default function MatchesPage() {
     fetchMatches()
   }, [])
 
-  const handleTriggerScrape = async () => {
+  const isSyncLocked = () => {
+    return false // Disabled for testing
+  }
+
+  const handleSyncProfile = async () => {
+    if (isSyncLocked()) {
+      const lastSync = new Date(lastSyncAt!).getTime()
+      const remaining = 24 - (new Date().getTime() - lastSync) / (1000 * 60 * 60)
+      toast.info(`Daily limit reached. Try again in ${Math.ceil(remaining)} hours.`)
+      return
+    }
+
     setIsScraping(true)
     try {
-      const response = await analysisService.triggerScrape()
+      const response = await analysisService.syncUserMatches()
       toast.success(response.message)
-      // We don't wait for the scrape to finish as it's background, 
-      // but we can refresh the list after a small delay
-      setTimeout(fetchMatches, 5000)
-    } catch (error) {
-      toast.error("Failed to start search")
+      setLastSyncAt(new Date().toISOString())
+      // Refresh matches after a delay to allow AI to process
+      setTimeout(fetchMatches, 10000)
+    } catch (error: any) {
+      toast.error(error.message || "Failed to start sync")
     } finally {
       setIsScraping(false)
     }
@@ -80,50 +113,63 @@ export default function MatchesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
+  const locked = isSyncLocked()
+
   return (
-    <div className="space-y-8 pb-12">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Recommended Jobs</h1>
-          <p className="mt-2 text-muted-foreground">
-            AI-powered vacancies matched specifically to your latest CV
-          </p>
-        </div>
-        <div className="flex flex-col items-center gap-3 sm:flex-row">
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search jobs..."
-              className="pl-9 bg-card/50"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={handleTriggerScrape}
-            disabled={isScraping}
-          >
-            {isScraping ? (
-              <RefreshCcw className="h-4 w-4 animate-spin" />
-            ) : (
-              <Search className="h-4 w-4" />
+    <div className="min-h-screen bg-background">
+      <DashboardHeader
+        title="Recommended Jobs"
+        description="AI-powered vacancies matched specifically to your latest CV profile."
+      />
+
+      <div className="p-6">
+        <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col items-center gap-4 sm:flex-row">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search matches..."
+                className="pl-10 h-11 bg-card/40 border-border/40 focus:border-primary/40 focus:ring-primary/10 rounded-xl"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Button
+              variant={locked ? "secondary" : "default"}
+              className={`h-11 px-6 rounded-xl gap-2 font-semibold transition-all duration-300 flex flex-col items-center justify-center min-w-[160px] ${
+                locked ? "opacity-70 cursor-not-allowed grayscale" : "shadow-lg shadow-primary/20 hover:scale-[1.02]"
+              }`}
+              onClick={handleSyncProfile}
+              disabled={isScraping}
+            >
+              <div className="flex items-center gap-2">
+                {isScraping ? (
+                  <RefreshCcw className="h-4 w-4 animate-spin" />
+                ) : locked ? (
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-white fill-white/20" />
+                )}
+                <span>{isScraping ? "Processing..." : locked ? "Sync Locked" : "Sync Profile"}</span>
+              </div>
+              <span className={`text-[10px] uppercase tracking-widest font-bold ${locked ? 'text-muted-foreground' : 'text-white/70'}`}>
+                {locked ? "0/1 syncs left" : "1/1 syncs left today"}
+              </span>
+            </Button>
+            {!locked && (
+              <div className="flex items-center gap-2 rounded-xl bg-success/10 px-4 py-2 text-sm font-bold text-success border border-success/20">
+                <Sparkles className="h-4 w-4" />
+                <span>{filteredMatches.length} Matches Found</span>
+              </div>
             )}
-            {isScraping ? "Searching..." : "Search Now"}
-          </Button>
-          <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-            <Sparkles className="h-4 w-4" />
-            <span>{filteredMatches.length} Matches Found</span>
           </div>
         </div>
-      </div>
 
       {filteredMatches.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-20 text-center">
@@ -194,14 +240,26 @@ export default function MatchesPage() {
                   </div>
                 </div>
 
-                <div className="mb-6 rounded-xl bg-secondary/50 p-4">
+                <div className="mb-6 rounded-xl bg-secondary/50 p-4 relative group/insight">
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Sparkles className="h-4 w-4 text-primary" />
                     AI Insight
                   </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">
-                    {match.summary}
-                  </p>
+                  <div className="relative">
+                    <p className={`text-sm leading-relaxed text-muted-foreground transition-all duration-300 ${
+                      expandedId === match.id ? "" : "line-clamp-3"
+                    }`}>
+                      {match.summary}
+                    </p>
+                    {match.summary && match.summary.length > 150 && (
+                      <button
+                        onClick={() => setExpandedId(expandedId === match.id ? null : match.id)}
+                        className="mt-2 text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                      >
+                        {expandedId === match.id ? "Read Less" : "Read More..."}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-auto flex items-center justify-between gap-4">
@@ -224,7 +282,7 @@ export default function MatchesPage() {
       )}
 
       {/* Info Card */}
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6">
+      <div className="mt-8 rounded-2xl border border-primary/20 bg-primary/5 p-6">
         <div className="flex gap-4">
           <div className="hidden h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 sm:flex">
             <AlertCircle className="h-5 w-5 text-primary" />
@@ -239,5 +297,6 @@ export default function MatchesPage() {
         </div>
       </div>
     </div>
+  </div>
   )
 }

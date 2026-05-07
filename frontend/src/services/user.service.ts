@@ -10,6 +10,7 @@ export interface UserProfileResponse {
     cvKeywords: string[]
     cvSummary: string | null
     cvUpdatedAt: string | null
+    lastManualSyncAt: string | null
     createdAt: string
   }
 }
@@ -33,6 +34,24 @@ export const userService = {
     return api<{ message: string }>("/api/user/keywords", {
       method: "PUT",
       body: { keywords }
+    })
+  },
+
+  updateProfile: async (data: { name: string }): Promise<{ message: string; user: any }> => {
+    return api<{ message: string; user: any }>("/api/user/profile", {
+      method: "PUT",
+      body: data
+    })
+  },
+
+  uploadAvatar: async (file: File): Promise<{ message: string; avatar: string }> => {
+    const formData = new FormData()
+    formData.append("avatar", file)
+
+    return api<{ message: string; avatar: string }>("/api/user/avatar", {
+      method: "POST",
+      body: formData,
+      isFormData: true
     })
   }
 }

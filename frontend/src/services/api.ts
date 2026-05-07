@@ -77,8 +77,10 @@ export const api = async <T = unknown>(
     body: requestBody,
   })
 
-  // If 401, try refreshing the token
-  if (response.status === 401) {
+  // If 401, try refreshing the token (SKIP for login/refresh endpoints)
+  const isAuthRequest = endpoint.includes("/api/auth/login") || endpoint.includes("/api/auth/refresh")
+  
+  if (response.status === 401 && !isAuthRequest) {
     const newToken = await refreshAccessToken()
     if (newToken) {
       requestHeaders["Authorization"] = `Bearer ${newToken}`
@@ -89,7 +91,10 @@ export const api = async <T = unknown>(
       })
     } else {
       clearTokens()
-      window.location.href = "/login"
+      // Only redirect if NOT already on login page to avoid infinite reloads and data loss
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login"
+      }
       throw new Error("Session expired")
     }
   }

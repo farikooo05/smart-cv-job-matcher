@@ -33,16 +33,17 @@ export function NotificationBell() {
   const fetchMatches = async () => {
     try {
       const response = await analysisService.getMatches();
-      // Store last 5 matches for the dropdown
       const recentMatches = response.matches.slice(0, 5);
       setMatches(recentMatches);
       
-      // For this demo/impl, unread are matches with score > 70 that are newer than 1 hour 
-      // or simply the first visit. In a full app we'd track 'viewed' in DB.
+      // Get last viewed timestamp from storage
+      const lastViewed = localStorage.getItem("optijob_notifications_last_viewed");
+      const lastViewedTime = lastViewed ? parseInt(lastViewed) : 0;
+      
+      // Count matches created AFTER the last time the user opened the bell
       const newMatches = response.matches.filter(m => {
-        const date = new Date(m.createdAt);
-        const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        return date > hourAgo;
+        const matchTime = new Date(m.createdAt).getTime();
+        return matchTime > lastViewedTime;
       }).length;
       
       setUnreadCount(newMatches);
@@ -55,12 +56,13 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchMatches();
-    // Poll every 60 seconds
-    const interval = setInterval(fetchMatches, 60000);
+    const interval = setInterval(fetchMatches, 30000); // Poll every 30s for better responsiveness
     return () => clearInterval(interval);
   }, []);
 
   const handleOpen = () => {
+    // Update last viewed timestamp
+    localStorage.setItem("optijob_notifications_last_viewed", Date.now().toString());
     setUnreadCount(0);
   };
 
@@ -125,7 +127,7 @@ export function NotificationBell() {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link 
-            to="/dashboard/results" 
+            to="/dashboard/matches" 
             className="w-full text-center text-xs font-medium text-primary py-2 cursor-pointer"
           >
             View all professional matches

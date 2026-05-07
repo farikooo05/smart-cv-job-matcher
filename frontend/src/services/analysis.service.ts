@@ -111,6 +111,10 @@ export const analysisService = {
     return api<{ message: string }>(`/api/analysis/${id}`, { method: "DELETE" })
   },
 
+  syncUserMatches: async (): Promise<{ message: string }> => {
+    return api<{ message: string }>("/api/analysis/sync", { method: "POST" })
+  },
+
   getStats: async (): Promise<DashboardStats> => {
     return api<DashboardStats>("/api/analysis/stats")
   },

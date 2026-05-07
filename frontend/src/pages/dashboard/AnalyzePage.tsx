@@ -10,7 +10,7 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react"
-import { useState, useCallback, type DragEvent, type ChangeEvent } from "react"
+import { useState, useCallback, useEffect, type DragEvent, type ChangeEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { analysisService } from "../../services/analysis.service"
 import { toast } from "sonner"
@@ -19,9 +19,16 @@ export default function AnalyzePage() {
   const navigate = useNavigate()
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [jobDescription, setJobDescription] = useState("")
+  const [jobDescription, setJobDescription] = useState(() => {
+    return localStorage.getItem("optijob_pending_jd") || ""
+  })
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+
+  // Auto-persist JD to local storage
+  useEffect(() => {
+    localStorage.setItem("optijob_pending_jd", jobDescription)
+  }, [jobDescription])
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -74,6 +81,7 @@ export default function AnalyzePage() {
 
     try {
       const { analysis } = await analysisService.create(file, jobDescription)
+      localStorage.removeItem("optijob_pending_jd") // Clear on success
       toast.success("Analysis complete!")
       navigate(`/dashboard/results/${analysis.id}`)
     } catch (error) {

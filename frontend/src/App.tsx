@@ -1,6 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
 import { Toaster } from './components/ui/sonner'
-import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import type { ReactNode } from 'react'
@@ -20,16 +19,9 @@ import HistoryPage from './pages/dashboard/HistoryPage'
 import MatchesPage from './pages/dashboard/MatchesPage'
 import ProfilePage from './pages/dashboard/ProfilePage'
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ""
-
-const GoogleWrapper = ({ children }: { children: ReactNode }) => {
-  if (!GOOGLE_CLIENT_ID) return <>{children}</>
-  return <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>{children}</GoogleOAuthProvider>
-}
 
 const App = () => {
   return (
-    <GoogleWrapper>
       <AuthProvider>
         <Routes>
           {/* Public Routes */}
@@ -52,7 +44,6 @@ const App = () => {
         </Routes>
         <Toaster />
       </AuthProvider>
-    </GoogleWrapper>
   )
 }
 
