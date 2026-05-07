@@ -57,12 +57,12 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
           console.warn(`[Analysis] Local extraction from PDF failed, falling back to Master Profile...`)
           // 2. Fallback to Master Profile only if PDF extraction fails
           try {
-            const user = await (prisma.user as any).findUnique({
+            const user = await prisma.user.findUnique({
               where: { id: userId },
               select: { cvSkillsMultilingual: true }
             })
-            if ((user as any)?.cvSkillsMultilingual) {
-              multilingualSkills = JSON.parse((user as any).cvSkillsMultilingual)
+            if (user?.cvSkillsMultilingual) {
+              multilingualSkills = JSON.parse(user.cvSkillsMultilingual)
             }
           } catch (dbError) {
             console.warn(`[Analysis] Failed to fetch user synonyms for fallback.`)
@@ -323,7 +323,7 @@ export const getMatches = async (req: Request, res: Response): Promise<void> => 
     const userId = req.userId as string
 
     // Fetch matches with the related job data
-    const matches = await (prisma as any).jobMatch.findMany({
+    const matches = await prisma.jobMatch.findMany({
       where: { userId },
       include: {
         job: true,
@@ -372,13 +372,42 @@ export const triggerScrape = async (_req: Request, res: Response): Promise<void>
 export const syncUserMatches = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.userId as string
-    console.log(`[Matching] Personal sync requested for User: ${userId}`)
+
+    /* 
+    // 1. Check if user already synced in the last 24 hours
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { lastManualSyncAt: true }
+    })
+
+    if (user?.lastManualSyncAt) {
+      const lastSync = new Date(user.lastManualSyncAt).getTime()
+      const now = new Date().getTime()
+      const hoursSinceSync = (now - lastSync) / (1000 * 60 * 60)
+
+      if (hoursSinceSync < 24) {
+        const hoursRemaining = Math.ceil(24 - hoursSinceSync)
+        res.status(429).json({ 
+          error: `Daily limit reached. You can perform another manual sync in ${hoursRemaining} hours, or wait for the automated search at 20:00.` 
+        })
+        return
+      }
+    }
+    */
+
+    // 2. Update the last sync timestamp
+    await prisma.user.update({
+      where: { id: userId },
+      data: { lastManualSyncAt: new Date() }
+    })
+
+    console.log(`[Matching] Personal sync authorized and started for User: ${userId}`)
     
     // Trigger personal matching cycle in background
     runMatchingCycle(userId)
       .catch(err => console.error(`[Matching] Personal sync error for ${userId}:`, err))
 
-    res.json({ message: "Personal job analysis started. Refresh in a few moments." })
+    res.json({ message: "Personal job analysis started. You will receive an email summary shortly." })
   } catch (error) {
     console.error("Personal sync error:", error)
     res.status(500).json({ error: "Internal server error" })
@@ -390,7 +419,7 @@ export const deleteMatch = async (req: Request, res: Response): Promise<void> =>
     const userId = req.userId as string
     const id = req.params.id as string
 
-    const match = await (prisma as any).jobMatch.findFirst({
+    const match = await prisma.jobMatch.findFirst({
       where: { 
         id, 
         userId 
@@ -402,7 +431,7 @@ export const deleteMatch = async (req: Request, res: Response): Promise<void> =>
       return
     }
 
-    await (prisma as any).jobMatch.delete({ where: { id } })
+    await prisma.jobMatch.delete({ where: { id } })
 
     res.json({ message: "Match removed from recommendations" })
   } catch (error) {

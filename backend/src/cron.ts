@@ -3,8 +3,8 @@ import { runFullScrape } from "./services/scraper.service.js"
 import { runMatchingCycle } from "./services/matching.service.js"
 
 export const initCronJobs = () => {
-  // Run Scraper once a day at Noon (12:00 PM)
-  cron.schedule("0 12 * * *", async () => {
+  // Run Scraper once a day at 20:00 (8:00 PM)
+  cron.schedule("0 20 * * *", async () => {
     try {
       await runFullScrape()
       // Wait 5 minutes for jobs to settle, then run matching

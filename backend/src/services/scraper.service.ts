@@ -14,7 +14,7 @@ interface ScrapedJob {
 
 export const scrapeGlorri = async (): Promise<ScrapedJob[]> => {
   try {
-    const { data } = await axios.get("https://api.glorri.az/job-service-v2/jobs/public?offset=0&limit=20", {
+    const { data } = await axios.get("https://api.glorri.az/job-service-v2/jobs/public?offset=0&limit=50", {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/json"
@@ -126,10 +126,10 @@ export const runFullScrape = async (): Promise<void> => {
 
   for (const job of allJobs) {
     try {
-      const exists = await (prisma as any).job.findUnique({ where: { url: job.url } })
+      const exists = await prisma.job.findUnique({ where: { url: job.url } })
       
       if (!exists) {
-        await (prisma as any).job.create({
+        await prisma.job.create({
           data: {
             title: job.title,
             company: job.company,

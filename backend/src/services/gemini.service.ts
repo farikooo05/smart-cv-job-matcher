@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 /**
  * Circuit breaker for AI overload
  */
-const FORCE_FALLBACK = true // Set to true to test backup engine solo
+const FORCE_FALLBACK = process.env.FORCE_AI_FALLBACK === "true" // Use env var to toggle fallback engine
 let lastQuotaErrorTimestamp: number | null = null
 const QUOTA_COOLDOWN_MS = 15 * 60 * 1000 // 15 minutes
 
@@ -19,7 +19,7 @@ export const isAiOverloaded = (): boolean => {
  */
 const withRetry = async <T>(
   operation: () => Promise<T>,
-  retries: number = 1,
+  retries: number = 3,
   delay: number = 2000
 ): Promise<T> => {
   try {
@@ -329,7 +329,11 @@ export const matchJobsWithGemini = async (
         "summary": string
     }
 
-    Strictly output valid JSON. No markdown.
+    Strict Rules:
+    1. If the Job Vacancy is in a completely different industry than the CV (e.g., a Software Engineer matching a Sales or Barista role), the score MUST be below 10%.
+    2. Do not hallucinate skills. If a skill is not explicitly mentioned in the job or CV, it does not exist.
+    3. Be critical. Only give >70% if the candidate has the primary tech stack requested.
+    4. Strictly output valid JSON. No markdown.
   `
 
   try {

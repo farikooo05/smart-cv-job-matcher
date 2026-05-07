@@ -9,7 +9,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.userId as string
-    const user = await (prisma as any).user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -20,6 +20,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
         cvKeywords: true,
         cvSummary: true,
         cvUpdatedAt: true,
+        lastManualSyncAt: true,
         createdAt: true,
       }
     })
@@ -85,7 +86,7 @@ export const updateMasterCv = async (req: Request, res: Response): Promise<void>
       }
     }
 
-    const user = await (prisma as any).user.update({
+    const user = await prisma.user.update({
       where: { id: userId },
       data: {
         cvFileName: file.originalname,
@@ -145,7 +146,7 @@ export const updateCvKeywords = async (req: Request, res: Response): Promise<voi
       return
     }
 
-    await (prisma as any).user.update({
+    await prisma.user.update({
       where: { id: userId },
       data: {
         cvKeywords: JSON.stringify(keywords)
@@ -158,3 +159,71 @@ export const updateCvKeywords = async (req: Request, res: Response): Promise<voi
     res.status(500).json({ error: "Internal server error" })
   }
 }
+
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId as string
+    const { name } = req.body
+
+    if (!name || name.trim().length === 0) {
+      res.status(400).json({ error: "Name is required" })
+      return
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { name: name.trim() },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+      }
+    })
+
+    res.json({
+      message: "Profile updated successfully",
+      user
+    })
+  } catch (error) {
+    console.error("Update profile error:", error)
+    res.status(500).json({ error: "Internal server error" })
+  }
+}
+
+export const updateAvatar = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId as string
+    const file = req.file
+
+    if (!file) {
+      console.warn("📸 [Avatar Controller] Request reached controller but no file was attached.")
+      res.status(400).json({ error: "No image file provided" })
+      return
+    }
+
+    console.log(`📸 [Avatar Controller] Processing file: ${file.originalname} | Type: ${file.mimetype} | Size: ${(file.size / 1024).toFixed(2)} KB`)
+
+    // Create the public URL path
+    const baseUrl = process.env.API_URL || "http://localhost:5000"
+    const avatarUrl = `${baseUrl}/uploads/avatars/${file.filename}`
+    
+    console.log(`📸 [Avatar Controller] File saved to disk. URL: ${avatarUrl}. Saving to DB...`)
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { avatar: avatarUrl }
+    })
+
+    console.log("📸 [Avatar Controller] DB update successful.")
+    res.json({
+      message: "Avatar updated successfully",
+      avatar: avatarUrl
+    })
+  } catch (error) {
+    console.error("📸 [Avatar Controller] ERROR:", error)
+    res.status(500).json({ error: "Internal server error while saving avatar" })
+  }
+}
+
+
