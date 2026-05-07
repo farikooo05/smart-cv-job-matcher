@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { Toaster } from './components/ui/sonner'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import type { ReactNode } from 'react'
+
 
 // Pages
 import LandingPage from './pages/LandingPage'

@@ -14,7 +14,6 @@ import {
   RefreshCcw, 
   Trash2,
   Clock,
-  Lock,
   Loader2
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
