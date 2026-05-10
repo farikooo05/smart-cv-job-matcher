@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
 import { cn } from "../lib/utils"
 import { Button } from "../components/ui/button"
 import {
@@ -12,6 +13,9 @@ import {
   ChevronRight,
   User,
   Briefcase,
+  Crown,
+  Moon,
+  Sun,
 } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
 
@@ -33,6 +37,9 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return document.documentElement.classList.contains('dark')
+  })
 
   const handleLogout = () => {
     logout()
@@ -68,6 +75,25 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
         </button>
       </div>
 
+      {/* Upgrade Button */}
+      <div className="px-3 pt-3">
+        <Link to="/dashboard/subscription">
+          {collapsed ? (
+            <button
+              title="Upgrade to Pro"
+              className="flex w-full items-center justify-center rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-2 transition-all hover:bg-yellow-500/20"
+            >
+              <Crown className="h-4 w-4 text-yellow-400" />
+            </button>
+          ) : (
+            <button className="flex w-full items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-sm font-semibold text-yellow-400 transition-all hover:bg-yellow-500/20 hover:shadow-md hover:shadow-yellow-500/10">
+              <Crown className="h-4 w-4 shrink-0" />
+              <span>Upgrade to Pro</span>
+            </button>
+          )}
+        </Link>
+      </div>
+
       {/* Main Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         <div className={cn("mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground", collapsed && "sr-only")}>
@@ -96,7 +122,24 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
       </nav>
 
       {/* Bottom Section */}
-      <div className="border-t border-border/50 p-3">
+      <div className="border-t border-border/50 p-3 space-y-2">
+        {/* Theme Toggle */}
+        <button
+          onClick={() => {
+            const isDark = document.documentElement.classList.toggle('dark')
+            setIsDarkMode(isDark)
+            localStorage.setItem('theme', isDark ? 'dark' : 'light')
+          }}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            collapsed && "justify-center"
+          )}
+          title={isDarkMode ? "Light Mode" : "Dark Mode"}
+        >
+          {isDarkMode ? <Sun className="h-5 w-5 shrink-0" /> : <Moon className="h-5 w-5 shrink-0" />}
+          {!collapsed && <span>{isDarkMode ? "Light Mode" : "Dark Mode"}</span>}
+        </button>
+
         {/* User Profile */}
         <div className={cn(
           "flex items-center gap-3 rounded-lg border border-border/50 bg-sidebar-accent/50 p-3",
