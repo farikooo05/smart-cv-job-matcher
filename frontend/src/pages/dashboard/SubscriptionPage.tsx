@@ -20,6 +20,7 @@ interface Plan {
   badge?: string
   monthlyPrice: number
   yearlyPrice: number
+  period?: string
   description: string
   color: string
   borderColor: string
@@ -61,8 +62,9 @@ const plans: Plan[] = [
     name: "Pro",
     icon: <Zap className="h-5 w-5 text-yellow-400" />,
     badge: "Most Popular",
-    monthlyPrice: 9.99,
-    yearlyPrice: 7.99,
+    monthlyPrice: 7,
+    yearlyPrice: 5.5, // slightly cheaper if billed yearly?
+    period: "week",
     description: "For serious job seekers who want the full AI experience.",
     color: "text-primary",
     borderColor: "border-primary/50",
@@ -220,13 +222,13 @@ export default function SubscriptionPage() {
                         ${price}
                       </span>
                       <span className="mb-1 text-sm text-muted-foreground">
-                        / month
+                        / {plan.period || "month"}
                       </span>
                     </div>
                   )}
                   {billing === "yearly" && price > 0 && (
                     <p className="mt-1 text-xs text-green-400">
-                      Billed as ${(price * 12).toFixed(0)}/year
+                      Billed as ${(price * (plan.period === "week" ? 52 : 12)).toFixed(0)}/year
                     </p>
                   )}
                 </div>

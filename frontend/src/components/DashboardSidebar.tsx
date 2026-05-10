@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
 import { cn } from "../lib/utils"
 import { Button } from "../components/ui/button"
 import {
@@ -13,6 +14,8 @@ import {
   User,
   Briefcase,
   Crown,
+  Moon,
+  Sun,
 } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
 
@@ -34,6 +37,9 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return document.documentElement.classList.contains('dark')
+  })
 
   const handleLogout = () => {
     logout()
@@ -116,7 +122,24 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
       </nav>
 
       {/* Bottom Section */}
-      <div className="border-t border-border/50 p-3">
+      <div className="border-t border-border/50 p-3 space-y-2">
+        {/* Theme Toggle */}
+        <button
+          onClick={() => {
+            const isDark = document.documentElement.classList.toggle('dark')
+            setIsDarkMode(isDark)
+            localStorage.setItem('theme', isDark ? 'dark' : 'light')
+          }}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            collapsed && "justify-center"
+          )}
+          title={isDarkMode ? "Light Mode" : "Dark Mode"}
+        >
+          {isDarkMode ? <Sun className="h-5 w-5 shrink-0" /> : <Moon className="h-5 w-5 shrink-0" />}
+          {!collapsed && <span>{isDarkMode ? "Light Mode" : "Dark Mode"}</span>}
+        </button>
+
         {/* User Profile */}
         <div className={cn(
           "flex items-center gap-3 rounded-lg border border-border/50 bg-sidebar-accent/50 p-3",
