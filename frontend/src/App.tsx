@@ -18,6 +18,7 @@ import InsightsPage from './pages/dashboard/InsightsPage'
 import HistoryPage from './pages/dashboard/HistoryPage'
 import MatchesPage from './pages/dashboard/MatchesPage'
 import ProfilePage from './pages/dashboard/ProfilePage'
+import SubscriptionPage from './pages/dashboard/SubscriptionPage'
 
 
 const App = () => {
@@ -39,6 +40,7 @@ const App = () => {
               <Route path="results/:id" element={<ResultsPage />} />
               <Route path="insights" element={<InsightsPage />} />
               <Route path="history" element={<HistoryPage />} />
+              <Route path="subscription" element={<SubscriptionPage />} />
             </Route>
           </Route>
         </Routes>

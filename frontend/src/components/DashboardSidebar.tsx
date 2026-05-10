@@ -12,6 +12,7 @@ import {
   ChevronRight,
   User,
   Briefcase,
+  Crown,
 } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
 
@@ -66,6 +67,25 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
+      </div>
+
+      {/* Upgrade Button */}
+      <div className="px-3 pt-3">
+        <Link to="/dashboard/subscription">
+          {collapsed ? (
+            <button
+              title="Upgrade to Pro"
+              className="flex w-full items-center justify-center rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-2 transition-all hover:bg-yellow-500/20"
+            >
+              <Crown className="h-4 w-4 text-yellow-400" />
+            </button>
+          ) : (
+            <button className="flex w-full items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-sm font-semibold text-yellow-400 transition-all hover:bg-yellow-500/20 hover:shadow-md hover:shadow-yellow-500/10">
+              <Crown className="h-4 w-4 shrink-0" />
+              <span>Upgrade to Pro</span>
+            </button>
+          )}
+        </Link>
       </div>
 
       {/* Main Navigation */}
