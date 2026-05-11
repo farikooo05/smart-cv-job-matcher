@@ -53,7 +53,11 @@ export default function MatchesPage() {
         userService.getProfile()
       ])
       setMatches(matchesRes.matches)
-      setLastSyncAt(profileRes.user.lastManualSyncAt)
+      
+      // Ensure we get the latest sync timestamp
+      const syncTime = profileRes.user.lastManualSyncAt
+      console.log("Debug: Last sync at", syncTime)
+      setLastSyncAt(syncTime)
     } catch (error) {
       console.error("Failed to fetch matches:", error)
       toast.error("Could not load job matches")
@@ -115,6 +119,10 @@ export default function MatchesPage() {
       setTimeout(fetchMatches, 10000)
     } catch (error: any) {
       toast.error(error.message || "Failed to start sync")
+      // If we hit a limit, refresh the profile to get the latest lastSyncAt and start the timer
+      if (error.status === 429 || error.message?.includes("429") || error.message?.includes("limit")) {
+        fetchMatches()
+      }
     } finally {
       setIsScraping(false)
     }
