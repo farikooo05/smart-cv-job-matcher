@@ -43,6 +43,7 @@ export default function MatchesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const fetchMatches = async () => {
@@ -65,8 +66,36 @@ export default function MatchesPage() {
     fetchMatches()
   }, [])
 
+  useEffect(() => {
+    if (!lastSyncAt) return
+
+    const updateTimer = () => {
+      const lastSync = new Date(lastSyncAt).getTime()
+      const now = new Date().getTime()
+      const diff = now - lastSync
+      const limit = 24 * 60 * 60 * 1000 // 24 hours in ms
+
+      if (diff < limit) {
+        const remaining = limit - diff
+        const hours = Math.floor(remaining / (1000 * 60 * 60))
+        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((remaining % (1000 * 60)) / 1000)
+        setCountdown(`${hours}h ${minutes}m ${seconds}s`)
+      } else {
+        setCountdown(null)
+      }
+    }
+
+    updateTimer()
+    const interval = setInterval(updateTimer, 1000)
+    return () => clearInterval(interval)
+  }, [lastSyncAt])
+
   const isSyncLocked = () => {
-    return false // Disabled for testing
+    if (!lastSyncAt) return false
+    const lastSync = new Date(lastSyncAt).getTime()
+    const now = new Date().getTime()
+    return (now - lastSync) < (24 * 60 * 60 * 1000)
   }
 
   const handleSyncProfile = async () => {
@@ -155,10 +184,10 @@ export default function MatchesPage() {
                 ) : (
                   <Sparkles className="h-4 w-4 text-white fill-white/20" />
                 )}
-                <span>{isScraping ? "Processing..." : locked ? "Sync Locked" : "Sync Profile"}</span>
+                <span>{isScraping ? "Processing..." : locked ? (countdown || "Sync Locked") : "Sync Profile"}</span>
               </div>
               <span className={`text-[10px] uppercase tracking-widest font-bold ${locked ? 'text-muted-foreground' : 'text-white/70'}`}>
-                {locked ? "0/1 syncs left" : "1/1 syncs left today"}
+                {locked ? "Wait for cooldown" : "1/1 syncs left today"}
               </span>
             </Button>
             {!locked && (

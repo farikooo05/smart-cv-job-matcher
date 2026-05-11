@@ -373,7 +373,6 @@ export const syncUserMatches = async (req: Request, res: Response): Promise<void
   try {
     const userId = req.userId as string
 
-    /* 
     // 1. Check if user already synced in the last 24 hours
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -393,7 +392,6 @@ export const syncUserMatches = async (req: Request, res: Response): Promise<void
         return
       }
     }
-    */
 
     // 2. Update the last sync timestamp
     await prisma.user.update({
