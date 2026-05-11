@@ -8,7 +8,7 @@ export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background pb-16 md:pb-0">
+    <div className="min-h-screen bg-background pb-16 md:pb-0 pt-safe">
       <DashboardSidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
       <MobileNavbar />
       <main

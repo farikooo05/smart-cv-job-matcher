@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from "react"
+import { useNavigate } from "react-router-dom"
 import { userService } from "../../services/user.service"
+import { useAuth } from "../../contexts/AuthContext"
 import { 
   User, 
   Upload, 
@@ -12,7 +14,8 @@ import {
   Loader2,
   Edit2,
   Check,
-  Camera
+  Camera,
+  LogOut
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
 import { toast } from "sonner"
@@ -28,6 +31,8 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
@@ -36,6 +41,7 @@ export default function ProfilePage() {
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState("")
   const [newSkill, setNewSkill] = useState("")
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
@@ -148,6 +154,11 @@ export default function ProfilePage() {
     } catch (error) {
       toast.error("Failed to update skills")
     }
+  }
+
+  const handleLogoutClick = () => {
+    logout()
+    navigate("/login")
   }
 
   if (isLoading) {
@@ -307,6 +318,24 @@ export default function ProfilePage() {
               </label>
             )}
           </div>
+
+          <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6">
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground uppercase tracking-wider">
+              <LogOut className="h-4 w-4 text-destructive" />
+              Account
+            </h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Sign out from your account on this device.
+            </p>
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={() => setShowLogoutConfirm(true)}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Log Out
+            </Button>
+          </div>
         </div>
 
         {/* Right Column: AI Insights & Skills */}
@@ -379,6 +408,32 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-background border border-border/50 p-6">
+            <h2 className="text-lg font-semibold mb-2">Confirm Log Out</h2>
+            <p className="text-sm text-muted-foreground mb-6">Are you sure you want to log out? You'll need to sign in again to access your profile.</p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleLogoutClick}
+              >
+                Log Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
