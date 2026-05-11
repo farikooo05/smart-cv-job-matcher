@@ -134,3 +134,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Safe area utilities for mobile devices with notches */
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .pl-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  .pr-safe {
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
