@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { analysisService } from "../../services/analysis.service"
-import { userService } from "../../services/user.service"
 import { DashboardHeader } from "../../components/DashboardHeader"
 import { 
   Briefcase, 
@@ -11,9 +10,8 @@ import {
   TrendingUp, 
   AlertCircle, 
   Search, 
-  RefreshCcw, 
+  RefreshCcw,
   Trash2,
-  Clock,
   Loader2
 } from "lucide-react"
 import { Button } from "../../components/ui/button"
@@ -73,7 +71,7 @@ export default function MatchesPage() {
       setTimeout(fetchMatches, 10000)
     } catch (error: any) {
       toast.error(error.message || "Failed to start sync")
-      // If we hit a limit, refresh the profile to get the latest lastSyncAt and start the timer
+      // If we hit a limit, refresh matches
       if (error.status === 429 || error.message?.includes("429") || error.message?.includes("limit")) {
         fetchMatches()
       }
