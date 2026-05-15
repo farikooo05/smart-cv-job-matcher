@@ -373,32 +373,6 @@ export const syncUserMatches = async (req: Request, res: Response): Promise<void
   try {
     const userId = req.userId as string
 
-    // 1. Check if user already synced in the last 24 hours
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { lastManualSyncAt: true }
-    })
-
-    if (user?.lastManualSyncAt) {
-      const lastSync = new Date(user.lastManualSyncAt).getTime()
-      const now = new Date().getTime()
-      const hoursSinceSync = (now - lastSync) / (1000 * 60 * 60)
-
-      if (hoursSinceSync < 24) {
-        const hoursRemaining = Math.ceil(24 - hoursSinceSync)
-        res.status(429).json({ 
-          error: `Daily limit reached. You can perform another manual sync in ${hoursRemaining} hours, or wait for the automated search at 20:00.` 
-        })
-        return
-      }
-    }
-
-    // 2. Update the last sync timestamp
-    await prisma.user.update({
-      where: { id: userId },
-      data: { lastManualSyncAt: new Date() }
-    })
-
     console.log(`[Matching] Personal sync authorized and started for User: ${userId}`)
     
     // First scrape fresh jobs, then run personal matching
