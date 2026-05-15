@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react"
 import { analysisService } from "../../services/analysis.service"
 import { DashboardHeader } from "../../components/DashboardHeader"
-import { 
-  Briefcase, 
-  MapPin, 
-  ExternalLink, 
-  Sparkles, 
-  Building2, 
-  TrendingUp, 
-  AlertCircle, 
-  Search, 
+import {
+  Briefcase,
+  MapPin,
+  ExternalLink,
+  Sparkles,
+  Building2,
+  TrendingUp,
+  AlertCircle,
+  Search,
   RefreshCcw,
   Trash2,
   Loader2
@@ -40,7 +40,6 @@ export default function MatchesPage() {
   const [isScraping, setIsScraping] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const fetchMatches = async () => {
@@ -59,19 +58,14 @@ export default function MatchesPage() {
     fetchMatches()
   }, [])
 
-  const isSyncLocked = () => false
-
   const handleSyncProfile = async () => {
-
     setIsScraping(true)
     try {
       const response = await analysisService.syncUserMatches()
       toast.success(response.message)
-      // Refresh matches after a delay to allow AI to process
       setTimeout(fetchMatches, 10000)
     } catch (error: any) {
       toast.error(error.message || "Failed to start sync")
-      // If we hit a limit, refresh matches
       if (error.status === 429 || error.message?.includes("429") || error.message?.includes("limit")) {
         fetchMatches()
       }
@@ -93,7 +87,7 @@ export default function MatchesPage() {
     }
   }
 
-  const filteredMatches = matches.filter(match => 
+  const filteredMatches = matches.filter(match =>
     match.job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     match.job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
     match.job.source.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,8 +100,6 @@ export default function MatchesPage() {
       </div>
     )
   }
-
-  const locked = isSyncLocked()
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,33 +121,24 @@ export default function MatchesPage() {
               />
             </div>
             <Button
-              variant={locked ? "secondary" : "default"}
-              className={`h-11 px-6 rounded-xl gap-2 font-semibold transition-all duration-300 flex flex-col items-center justify-center min-w-[160px] ${
-                locked ? "opacity-70 cursor-not-allowed grayscale" : "shadow-lg shadow-primary/20 hover:scale-[1.02]"
-              }`}
+              variant="default"
+              className="h-11 px-6 rounded-xl gap-2 font-semibold transition-all duration-300 flex flex-col items-center justify-center min-w-[160px] shadow-lg shadow-primary/20 hover:scale-[1.02]"
               onClick={handleSyncProfile}
               disabled={isScraping}
             >
               <div className="flex items-center gap-2">
                 {isScraping ? (
                   <RefreshCcw className="h-4 w-4 animate-spin" />
-                ) : locked ? (
-                  <Clock className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <Sparkles className="h-4 w-4 text-white fill-white/20" />
                 )}
                 <span>{isScraping ? "Processing..." : "Sync Profile"}</span>
               </div>
-              <span className={`text-[10px] uppercase tracking-widest font-bold ${locked ? 'text-muted-foreground' : 'text-white/70'}`}>
-                {locked ? "Wait for cooldown" : "1/1 syncs left today"}
-              </span>
             </Button>
-            {!locked && (
-              <div className="flex items-center gap-2 rounded-xl bg-success/10 px-4 py-2 text-sm font-bold text-success border border-success/20">
-                <Sparkles className="h-4 w-4" />
-                <span>{filteredMatches.length} Matches Found</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 rounded-xl bg-success/10 px-4 py-2 text-sm font-bold text-success border border-success/20">
+              <Sparkles className="h-4 w-4" />
+              <span>{filteredMatches.length} Matches Found</span>
+            </div>
           </div>
         </div>
 
@@ -168,8 +151,8 @@ export default function MatchesPage() {
             {searchQuery ? "No matches for your search" : "No matches yet"}
           </h3>
           <p className="mt-2 max-w-sm text-muted-foreground">
-            {searchQuery 
-              ? "Try adjusting your search terms or clearing the filter." 
+            {searchQuery
+              ? "Try adjusting your search terms or clearing the filter."
               : "Our scraper is searching local job boards. We'll notify you as soon as we find a perfect match!"}
           </p>
         </div>
@@ -199,8 +182,8 @@ export default function MatchesPage() {
                   )}
                 </Button>
                 <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${
-                  match.score >= 80 
-                    ? "bg-success/10 text-success ring-success/20" 
+                  match.score >= 80
+                    ? "bg-success/10 text-success ring-success/20"
                     : "bg-warning/10 text-warning ring-warning/20"
                 }`}>
                   <TrendingUp className="h-3 w-3" />
@@ -254,8 +237,8 @@ export default function MatchesPage() {
                   <div className="text-xs text-muted-foreground">
                     Found {new Date(match.createdAt).toLocaleDateString()}
                   </div>
-                  <Button 
-                    variant="default" 
+                  <Button
+                    variant="default"
                     className="gap-2"
                     onClick={() => window.open(match.job.url, '_blank')}
                   >
@@ -278,7 +261,7 @@ export default function MatchesPage() {
           <div>
             <h4 className="font-semibold text-foreground">How matching works</h4>
             <p className="mt-1 text-sm text-muted-foreground">
-              Our scraper scans <strong>Glorri.az</strong>, <strong>JobSearch.az</strong>, and <strong>Busy.az</strong> once a day. 
+              Our scraper scans <strong>Glorri.az</strong>, <strong>JobSearch.az</strong>, and <strong>Busy.az</strong> once a day.
               We compare job descriptions against your most recently uploaded CV. Matches over 80% will trigger an email alert!
             </p>
           </div>
