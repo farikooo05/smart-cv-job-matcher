@@ -42,8 +42,7 @@ export default function MatchesPage() {
   const [isScraping, setIsScraping] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
-  const [countdown, setCountdown] = useState<string | null>(null)
+
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const fetchMatches = async () => {
@@ -55,9 +54,6 @@ export default function MatchesPage() {
       setMatches(matchesRes.matches)
       
       // Ensure we get the latest sync timestamp
-      const syncTime = profileRes.user.lastManualSyncAt
-      console.log("Debug: Last sync at", syncTime)
-      setLastSyncAt(syncTime)
     } catch (error) {
       console.error("Failed to fetch matches:", error)
       toast.error("Could not load job matches")
@@ -78,7 +74,6 @@ export default function MatchesPage() {
     try {
       const response = await analysisService.syncUserMatches()
       toast.success(response.message)
-      setLastSyncAt(new Date().toISOString())
       // Refresh matches after a delay to allow AI to process
       setTimeout(fetchMatches, 10000)
     } catch (error: any) {
@@ -156,7 +151,7 @@ export default function MatchesPage() {
                 ) : (
                   <Sparkles className="h-4 w-4 text-white fill-white/20" />
                 )}
-                <span>{isScraping ? "Processing..." : locked ? (countdown || "Sync Locked") : "Sync Profile"}</span>
+                <span>{isScraping ? "Processing..." : "Sync Profile"}</span>
               </div>
               <span className={`text-[10px] uppercase tracking-widest font-bold ${locked ? 'text-muted-foreground' : 'text-white/70'}`}>
                 {locked ? "Wait for cooldown" : "1/1 syncs left today"}
