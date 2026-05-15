@@ -70,45 +70,9 @@ export default function MatchesPage() {
     fetchMatches()
   }, [])
 
-  useEffect(() => {
-    if (!lastSyncAt) return
-
-    const updateTimer = () => {
-      const lastSync = new Date(lastSyncAt).getTime()
-      const now = new Date().getTime()
-      const diff = now - lastSync
-      const limit = 24 * 60 * 60 * 1000 // 24 hours in ms
-
-      if (diff < limit) {
-        const remaining = limit - diff
-        const hours = Math.floor(remaining / (1000 * 60 * 60))
-        const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60))
-        const seconds = Math.floor((remaining % (1000 * 60)) / 1000)
-        setCountdown(`${hours}h ${minutes}m ${seconds}s`)
-      } else {
-        setCountdown(null)
-      }
-    }
-
-    updateTimer()
-    const interval = setInterval(updateTimer, 1000)
-    return () => clearInterval(interval)
-  }, [lastSyncAt])
-
-  const isSyncLocked = () => {
-    if (!lastSyncAt) return false
-    const lastSync = new Date(lastSyncAt).getTime()
-    const now = new Date().getTime()
-    return (now - lastSync) < (24 * 60 * 60 * 1000)
-  }
+  const isSyncLocked = () => false
 
   const handleSyncProfile = async () => {
-    if (isSyncLocked()) {
-      const lastSync = new Date(lastSyncAt!).getTime()
-      const remaining = 24 - (new Date().getTime() - lastSync) / (1000 * 60 * 60)
-      toast.info(`Daily limit reached. Try again in ${Math.ceil(remaining)} hours.`)
-      return
-    }
 
     setIsScraping(true)
     try {
