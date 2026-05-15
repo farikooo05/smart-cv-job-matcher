@@ -47,13 +47,8 @@ export default function MatchesPage() {
 
   const fetchMatches = async () => {
     try {
-      const [matchesRes, profileRes] = await Promise.all([
-        analysisService.getMatches(),
-        userService.getProfile()
-      ])
+      const matchesRes = await analysisService.getMatches()
       setMatches(matchesRes.matches)
-      
-      // Ensure we get the latest sync timestamp
     } catch (error) {
       console.error("Failed to fetch matches:", error)
       toast.error("Could not load job matches")
