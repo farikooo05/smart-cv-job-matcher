@@ -14,7 +14,7 @@ interface ScrapedJob {
 
 export const scrapeGlorri = async (): Promise<ScrapedJob[]> => {
   try {
-    const { data } = await axios.get("https://api.glorri.az/job-service-v2/jobs/public?offset=0&limit=50", {
+    const { data } = await axios.get("https://api.glorri.az/job-service-v2/jobs/public?offset=0&limit=20", {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/json"
@@ -122,29 +122,18 @@ export const runFullScrape = async (): Promise<void> => {
   ])
 
   const allJobs = [...glorri, ...jobsearch, ...busy]
-  let addedCount = 0
 
-  for (const job of allJobs) {
-    try {
-      const exists = await prisma.job.findUnique({ where: { url: job.url } })
-      
-      if (!exists) {
-        await prisma.job.create({
-          data: {
-            title: job.title,
-            company: job.company,
-            location: job.location,
-            url: job.url,
-            source: job.source,
-            description: job.description || "Refer to job portal for details"
-          }
-        })
-        addedCount++
-      }
-    } catch (e) {
-      // Skip on error
-    }
-  }
+  const result = await prisma.job.createMany({
+    data: allJobs.map(job => ({
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      url: job.url,
+      source: job.source,
+      description: job.description || "Refer to job portal for details"
+    })),
+    skipDuplicates: true
+  })
 
-  console.log(`[Scraper] Cycle complete. Synced ${allJobs.length} potential jobs. Added ${addedCount} new records.`)
+  console.log(`[Scraper] Cycle complete. Synced ${allJobs.length} potential jobs. Added ${result.count} new records.`)
 }

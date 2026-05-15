@@ -401,11 +401,12 @@ export const syncUserMatches = async (req: Request, res: Response): Promise<void
 
     console.log(`[Matching] Personal sync authorized and started for User: ${userId}`)
     
-    // Trigger personal matching cycle in background
-    runMatchingCycle(userId)
+    // First scrape fresh jobs, then run personal matching
+    runFullScrape()
+      .then(() => runMatchingCycle(userId))
       .catch(err => console.error(`[Matching] Personal sync error for ${userId}:`, err))
 
-    res.json({ message: "Personal job analysis started. You will receive an email summary shortly." })
+    res.json({ message: "Scraping fresh jobs and analyzing matches. You will receive an email summary shortly." })
   } catch (error) {
     console.error("Personal sync error:", error)
     res.status(500).json({ error: "Internal server error" })
