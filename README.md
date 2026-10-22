@@ -76,6 +76,27 @@ frontend/
 
 ## Getting Started
 
+### Local development with Docker (PostgreSQL + pgvector)
+
+The repository's current Prisma schema uses PostgreSQL. Start the local database from the project root:
+
+```bash
+docker compose up -d
+```
+
+Create the backend environment file from the example (`Copy-Item backend/.env.example backend/.env` in PowerShell), then sync the schema and generate the Prisma client:
+
+```bash
+cd backend
+npx prisma db push
+npx prisma generate
+npm run dev
+```
+
+The local database is exposed on `localhost:5432`; the API runs on `http://localhost:5000`. Start the frontend in a separate terminal with `cd frontend; npm run dev`.
+
+The checked-in Prisma migration history was created for SQLite, while the current schema uses PostgreSQL. For a fresh local PostgreSQL database, use `prisma db push`; do not apply the old SQLite migration history to it.
+
 ### Prerequisites
 You need to have these installed on your computer:
 - Node.js (version 18 or newer)
