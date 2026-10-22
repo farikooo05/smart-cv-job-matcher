@@ -1,7 +1,6 @@
 import type { Request, Response } from "express"
 import prisma from "../lib/prisma.js"
-import { extractCvProfile, type CvProfileResult } from "../services/gemini.service.js"
-import { runBasicProfileExtraction } from "../services/fallback.service.js"
+import { extractCvProfile } from "../services/ai-provider.service.js"
 import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -64,27 +63,7 @@ export const updateMasterCv = async (req: Request, res: Response): Promise<void>
     }
 
     console.log(`[Profile] Extracting Master CV profile for User: ${userId}`)
-    let profile: CvProfileResult
-    
-    try {
-      profile = await extractCvProfile(file.buffer, file.mimetype)
-    } catch (aiError: any) {
-      // Check for Gemini Quota, Transient Error, or Local Test Mode
-      const isTransient = 
-        aiError.status === 429 || 
-        aiError.status === 503 || 
-        aiError.message?.includes("429") || 
-        aiError.message?.includes("503") || 
-        aiError.message?.includes("quota") ||
-        aiError.message?.includes("AI_FORCE_OFFLINE")
-      
-      if (isTransient) {
-        console.warn(`[Profile] Gemini forced offline or limit hit. Falling back to basic extraction...`)
-        profile = await runBasicProfileExtraction(file.buffer)
-      } else {
-        throw aiError
-      }
-    }
+    const profile = await extractCvProfile(file.buffer, file.mimetype)
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -123,6 +102,11 @@ export const updateMasterCv = async (req: Request, res: Response): Promise<void>
     })
   } catch (error: any) {
     console.error("Update master CV error:", error)
+
+    if (error.statusCode && error.code?.startsWith("AI_")) {
+      res.status(error.statusCode).json({ error: error.message, code: error.code })
+      return
+    }
     
     // Check for Gemini Quota Error
     if (error.status === 429 || error.message?.includes("429") || error.message?.includes("quota")) {

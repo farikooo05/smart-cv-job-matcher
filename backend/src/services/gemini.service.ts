@@ -1,20 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
 /**
- * Circuit breaker for AI overload
- */
-const FORCE_FALLBACK = process.env.FORCE_AI_FALLBACK === "true" // Use env var to toggle fallback engine
-let lastQuotaErrorTimestamp: number | null = null
-const QUOTA_COOLDOWN_MS = 15 * 60 * 1000 // 15 minutes
-
-export const isAiOverloaded = (): boolean => {
-  if (FORCE_FALLBACK) return true
-  if (!lastQuotaErrorTimestamp) return false
-  const timeSinceError = Date.now() - lastQuotaErrorTimestamp
-  return timeSinceError < QUOTA_COOLDOWN_MS
-}
-
-/**
  * Utility to retry API calls with exponential backoff
  */
 const withRetry = async <T>(
@@ -28,8 +14,7 @@ const withRetry = async <T>(
     const isQuotaError = error.status === 429 || error.message?.includes("429") || error.message?.includes("quota")
     
     if (isQuotaError) {
-      lastQuotaErrorTimestamp = Date.now()
-      console.error("[Gemini] Quota limit reached. Circuit breaker tripped.")
+      console.error("[Gemini] Quota limit reached.")
     }
 
     const isTransientError = 
@@ -77,10 +62,6 @@ export const analyzeWithGemini = async (
   mimeType: string,
   jobDescription: string
 ): Promise<GeminiAnalysisResult> => {
-  if (FORCE_FALLBACK) {
-    throw new Error("AI_FORCE_OFFLINE: Live analysis is in local test mode.")
-  }
-
   // Initialize inside the function to ensure process.env.GEMINI_API_KEY is loaded
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
   const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" })
@@ -198,10 +179,6 @@ export const extractCvProfile = async (
   pdfBuffer: Buffer,
   mimeType: string
 ): Promise<CvProfileResult> => {
-  if (FORCE_FALLBACK) {
-    throw new Error("AI_FORCE_OFFLINE: Profile extraction is in local test mode.")
-  }
-
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
   const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" })
 
@@ -285,10 +262,6 @@ export const matchJobsWithGemini = async (
   cvText: string,
   jobDescription: string
 ): Promise<GeminiAnalysisResult> => {
-  if (FORCE_FALLBACK) {
-    throw new Error("AI_FORCE_OFFLINE: Background matching is in local test mode.")
-  }
-
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
   const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" })
 
