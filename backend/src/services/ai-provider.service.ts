@@ -1,5 +1,4 @@
 import {
-  analyzeWithGemini,
   extractCvProfile as extractCvProfileWithGemini,
   matchJobsWithGemini,
 } from "./gemini.service.js"
@@ -7,6 +6,7 @@ import type { CvProfileResult, GeminiAnalysisResult } from "./gemini.service.js"
 import { analyzeWithOllama, extractCvProfileWithOllama, matchJobsWithOllama } from "./ollama.service.js"
 import { extractPdfText } from "./pdf.service.js"
 import { AiServiceError } from "./ollama.service.js"
+import { analyzeWithAiService } from "./ai-service.client.js"
 
 export type AiProvider = "gemini" | "ollama"
 
@@ -32,7 +32,8 @@ export const analyzeCv = async (
   requestedProvider?: unknown,
 ): Promise<GeminiAnalysisResult> => {
   if (getAiProvider(requestedProvider) === "gemini") {
-    return analyzeWithGemini(pdfBuffer, mimeType, jobDescription)
+    const cvText = await extractPdfText(pdfBuffer)
+    return analyzeWithAiService(cvText, jobDescription)
   }
   const cvText = await extractPdfText(pdfBuffer)
   return analyzeWithOllama(cvText, jobDescription)
