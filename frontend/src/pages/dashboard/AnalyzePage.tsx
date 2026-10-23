@@ -13,6 +13,7 @@ import {
 import { useState, useCallback, useEffect, type DragEvent, type ChangeEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { analysisService } from "../../services/analysis.service"
+import type { AnalysisAiProvider } from "../../services/analysis.service"
 import { toast } from "sonner"
 
 export default function AnalyzePage() {
@@ -24,6 +25,14 @@ export default function AnalyzePage() {
   })
   const [uploadStatus, setUploadStatus] = useState<"idle" | "uploading" | "success" | "error">("idle")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [aiProvider, setAiProvider] = useState<AnalysisAiProvider>(() => {
+    const savedProvider = localStorage.getItem("optijob_ai_provider")
+    return savedProvider === "gemini" ? "gemini" : "ollama"
+  })
+
+  useEffect(() => {
+    localStorage.setItem("optijob_ai_provider", aiProvider)
+  }, [aiProvider])
 
   // Auto-persist JD to local storage
   useEffect(() => {
@@ -80,7 +89,7 @@ export default function AnalyzePage() {
     setIsAnalyzing(true)
 
     try {
-      const { analysis } = await analysisService.create(file, jobDescription)
+      const { analysis } = await analysisService.create(file, jobDescription, aiProvider)
       localStorage.removeItem("optijob_pending_jd") // Clear on success
       toast.success("Analysis complete!")
       navigate(`/dashboard/results/${analysis.id}`)
@@ -250,6 +259,27 @@ We are looking for a Senior Software Engineer with 5+ years of experience in Rea
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-border/50 bg-card p-6">
+            <label htmlFor="ai-provider" className="mb-2 block text-lg font-semibold text-foreground">
+              AI Provider
+            </label>
+            <select
+              id="ai-provider"
+              value={aiProvider}
+              onChange={(event) => setAiProvider(event.target.value as AnalysisAiProvider)}
+              disabled={isAnalyzing}
+              className="w-full rounded-xl border border-border bg-secondary/30 p-3 text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:max-w-sm"
+            >
+              <option value="ollama">Local AI (Ollama)</option>
+              <option value="gemini">Gemini</option>
+            </select>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {aiProvider === "ollama"
+                ? "Runs through Ollama on your computer. Keep Ollama running; no Gemini API request is made."
+                : "Uses Gemini through the backend. A valid Gemini API key must be configured on the backend."}
+            </p>
           </div>
 
           {/* Analyze Button */}

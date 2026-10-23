@@ -9,7 +9,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
   
   try {
     const userId = req.userId as string
-    const { jobDescription } = req.body
+    const { jobDescription, aiProvider } = req.body
     const file = req.file
 
     if (!file) {
@@ -27,7 +27,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
     }
 
     console.log(`[Analysis] Calling AI service...`)
-    const result = await analyzeCv(file.buffer, file.mimetype, jobDescription)
+    const result = await analyzeCv(file.buffer, file.mimetype, jobDescription, aiProvider)
     const isAiAnalysis = true
     console.log(`[Analysis] AI provider returned success. Scoring: ${result.compatibilityScore}`)
 

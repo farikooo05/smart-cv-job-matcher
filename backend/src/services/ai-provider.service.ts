@@ -10,7 +10,14 @@ import { AiServiceError } from "./ollama.service.js"
 
 export type AiProvider = "gemini" | "ollama"
 
-export const getAiProvider = (): AiProvider => {
+export const getAiProvider = (requestedProvider?: unknown): AiProvider => {
+  if (requestedProvider !== undefined) {
+    if (requestedProvider !== "ollama" && requestedProvider !== "gemini") {
+      throw new AiServiceError('Unsupported AI provider. Use "ollama" or "gemini".', 400, "AI_PROVIDER_INVALID")
+    }
+    return requestedProvider
+  }
+
   const provider = (process.env.AI_PROVIDER || "ollama").toLowerCase()
   if (provider !== "gemini" && provider !== "ollama") {
     throw new AiServiceError(`Unsupported AI_PROVIDER "${provider}". Use "ollama" or "gemini".`, 500, "AI_PROVIDER_CONFIG_ERROR")
@@ -22,8 +29,9 @@ export const analyzeCv = async (
   pdfBuffer: Buffer,
   mimeType: string,
   jobDescription: string,
+  requestedProvider?: unknown,
 ): Promise<GeminiAnalysisResult> => {
-  if (getAiProvider() === "gemini") {
+  if (getAiProvider(requestedProvider) === "gemini") {
     return analyzeWithGemini(pdfBuffer, mimeType, jobDescription)
   }
   const cvText = await extractPdfText(pdfBuffer)

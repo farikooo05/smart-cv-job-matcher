@@ -95,7 +95,7 @@ npm run dev
 
 The local database is exposed on `localhost:5432`; the API runs on `http://localhost:5000`. Start the frontend in a separate terminal with `cd frontend; npm run dev`.
 
-The backend defaults to the local Ollama provider (`AI_PROVIDER=ollama`, model `qwen3:4b`). Keep Ollama running while analyzing CVs. To explicitly use Gemini instead, set `AI_PROVIDER=gemini` and add a valid `GEMINI_API_KEY` to `backend/.env`.
+On the Analyze CV page, choose either Local AI (Ollama) or Gemini for each analysis. The selection is remembered in the browser. Keep Ollama running when it is selected; Gemini requires a valid `GEMINI_API_KEY` in `backend/.env`. If the selected provider is unavailable, the request returns an error rather than silently switching providers. Background profile extraction and job matching continue to use the backend `AI_PROVIDER` setting (default: `ollama`, model `qwen3:4b`).
 
 The checked-in Prisma migration history was created for SQLite, while the current schema uses PostgreSQL. For a fresh local PostgreSQL database, use `prisma db push`; do not apply the old SQLite migration history to it.
 
