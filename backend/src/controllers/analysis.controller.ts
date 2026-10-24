@@ -27,7 +27,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
     }
 
     console.log(`[Analysis] Calling AI service...`)
-    const result = await analyzeCv(file.buffer, file.mimetype, jobDescription, aiProvider)
+    const result = await analyzeCv(file.buffer, file.mimetype, jobDescription, aiProvider, userId)
     const isAiAnalysis = true
     console.log(`[Analysis] AI provider returned success. Scoring: ${result.compatibilityScore}`)
 

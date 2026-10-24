@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AnalyzeRequest(BaseModel):
@@ -55,3 +55,37 @@ class AnalysisResponse(BaseModel):
     missingRequirements: list[str]
     suggestions: list[Suggestion]
     summary: str
+
+
+class IndexResumeRequest(BaseModel):
+    user_id: str = Field(min_length=1, max_length=128)
+    cv_text: str = Field(min_length=1, max_length=30_000)
+
+
+class IndexResumeResponse(BaseModel):
+    indexed_chunks: int = Field(ge=0)
+    embedding_model: str
+
+
+class SearchResumeRequest(BaseModel):
+    user_id: str = Field(min_length=1, max_length=128)
+    requirements: list[str] = Field(min_length=1, max_length=10)
+    top_k: int = Field(default=4, ge=1, le=10)
+
+    @field_validator("requirements")
+    @classmethod
+    def validate_requirements(cls, requirements: list[str]) -> list[str]:
+        if any(not item.strip() or len(item) > 300 for item in requirements):
+            raise ValueError("Each requirement must contain 1 to 300 characters.")
+        return [item.strip() for item in requirements]
+
+
+class RetrievedChunk(BaseModel):
+    chunk_id: int
+    section: str
+    text: str
+    similarity: float = Field(ge=-1, le=1)
+
+
+class SearchResumeResponse(BaseModel):
+    results: dict[str, list[RetrievedChunk]]

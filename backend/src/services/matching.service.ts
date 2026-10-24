@@ -41,7 +41,7 @@ const processUserMatches = async (user: any, recentJobs: any[], targetUserId?: s
       }
 
       const jdText = `Job Title: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}`
-      const result = await matchJobToCv(cvText, jdText)
+      const result = await matchJobToCv(cvText, jdText, user.id)
 
       if (result.compatibilityScore >= 50) {
         const match = await prisma.jobMatch.create({

@@ -27,7 +27,7 @@ The Express backend is built with Node.js and TypeScript. A separate Python Fast
 
 ```
 backend/
-├── ai-service/         # Python FastAPI service for validated Gemini analysis
+├── ai-service/         # Python FastAPI service for Gemini analysis and RAG retrieval
 ├── src/
 │   ├── controllers/     # Request handlers for different features
 │   ├── services/        # Business logic (CV analysis, job matching, AI)
@@ -85,7 +85,15 @@ The repository's current Prisma schema uses PostgreSQL. Create the backend envir
 docker compose --env-file backend/.env up -d --build
 ```
 
-Compose passes `GEMINI_API_KEY` from `backend/.env` to the AI service. If no key is configured, the app still works with Local AI (Ollama), while Gemini analysis returns a configuration error.
+Compose passes `GEMINI_API_KEY` from `backend/.env` to the AI service. If no key is configured, the app still works with Local AI (Ollama), while Gemini analysis returns a configuration error. The AI service also creates the `resume_chunks` pgvector table and HNSW index when it starts.
+
+For multilingual semantic indexing, download the local embedding model once from PowerShell:
+
+```powershell
+ollama pull bge-m3
+```
+
+This model is about 1.2 GB. Ollama stays on the host; Docker reaches it at `host.docker.internal:11434`. Uploading a Master CV stores section-aware chunks and their 1024-dimensional embeddings in PostgreSQL. If the embedding model is not installed, the CV profile still saves and the page reports that semantic indexing is pending.
 
 Then sync the schema and generate the Prisma client:
 
@@ -98,7 +106,7 @@ npm run dev
 
 The local database is exposed on `localhost:5432`; the API runs on `http://localhost:5000`. Start the frontend in a separate terminal with `cd frontend; npm run dev`.
 
-On the Analyze CV page, choose either Local AI (Ollama) or Gemini for each analysis. The selection is remembered in the browser. Keep Ollama running when it is selected. Gemini CV analysis goes through the FastAPI service on `localhost:8000`; other existing background profile and job matching tasks continue to use the backend `AI_PROVIDER` setting (default: `ollama`, model `qwen3:4b`). If a selected provider is unavailable, the request returns an error rather than silently switching providers.
+On the Analyze CV page, choose either Local AI (Ollama) or Gemini for each analysis. The selection is remembered in the browser. Keep Ollama running when it is selected. For Local AI, the backend retrieves relevant Master CV excerpts through the FastAPI RAG service and asks the local Ollama model (`qwen3:4b`) to compare those excerpts with the vacancy. Reported matches must include exact evidence found both in a retrieved excerpt and the source CV. Automated job matching uses the same retrieval flow. Gemini CV analysis goes through the FastAPI service on `localhost:8000` and does not use semantic retrieval. If a selected provider or the RAG index is unavailable, the request returns an error rather than silently switching providers or analyzing unsupported evidence.
 
 The checked-in Prisma migration history was created for SQLite, while the current schema uses PostgreSQL. For a fresh local PostgreSQL database, use `prisma db push`; do not apply the old SQLite migration history to it.
 

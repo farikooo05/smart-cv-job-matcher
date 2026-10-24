@@ -6,7 +6,7 @@ import type { CvProfileResult, GeminiAnalysisResult } from "./gemini.service.js"
 import { analyzeWithOllama, extractCvProfileWithOllama, matchJobsWithOllama } from "./ollama.service.js"
 import { extractPdfText } from "./pdf.service.js"
 import { AiServiceError } from "./ollama.service.js"
-import { analyzeWithAiService } from "./ai-service.client.js"
+import { analyzeWithAiService, retrieveResumeChunks } from "./ai-service.client.js"
 
 export type AiProvider = "gemini" | "ollama"
 
@@ -30,13 +30,22 @@ export const analyzeCv = async (
   mimeType: string,
   jobDescription: string,
   requestedProvider?: unknown,
+  userId?: string,
 ): Promise<GeminiAnalysisResult> => {
   if (getAiProvider(requestedProvider) === "gemini") {
     const cvText = await extractPdfText(pdfBuffer)
     return analyzeWithAiService(cvText, jobDescription)
   }
   const cvText = await extractPdfText(pdfBuffer)
-  return analyzeWithOllama(cvText, jobDescription)
+  if (!userId) {
+    throw new AiServiceError("A user profile is required for local CV evidence retrieval.", 400, "AI_RAG_USER_REQUIRED")
+  }
+  const requirements = extractRetrievalQueries(jobDescription)
+  const retrievedChunks = await retrieveResumeChunks(userId, requirements)
+  if (!retrievedChunks.length) {
+    throw new AiServiceError("No relevant CV excerpts were found. Upload the Master CV in My Profile first.", 422, "AI_RAG_NO_EVIDENCE")
+  }
+  return analyzeWithOllama(cvText, jobDescription, retrievedChunks)
 }
 
 export const extractCvProfile = async (pdfBuffer: Buffer, mimeType: string): Promise<CvProfileResult> => {
@@ -47,9 +56,22 @@ export const extractCvProfile = async (pdfBuffer: Buffer, mimeType: string): Pro
   return extractCvProfileWithOllama(cvText)
 }
 
-export const matchJobToCv = async (cvText: string, jobDescription: string): Promise<GeminiAnalysisResult> => {
+export const matchJobToCv = async (cvText: string, jobDescription: string, userId: string): Promise<GeminiAnalysisResult> => {
   if (getAiProvider() === "gemini") {
     return matchJobsWithGemini(cvText, jobDescription)
   }
-  return matchJobsWithOllama(cvText, jobDescription)
+  const retrievedChunks = await retrieveResumeChunks(userId, extractRetrievalQueries(jobDescription))
+  if (!retrievedChunks.length) {
+    throw new AiServiceError("No relevant CV excerpts were found for local job matching.", 422, "AI_RAG_NO_EVIDENCE")
+  }
+  return matchJobsWithOllama(cvText, jobDescription, retrievedChunks)
+}
+
+const extractRetrievalQueries = (jobDescription: string): string[] => {
+  const candidates = jobDescription
+    .split(/\r?\n|(?<=[.!?;])\s+/)
+    .map(line => line.replace(/^\s*[-*•\d.)]+\s*/, "").trim())
+    .filter(line => line.length >= 20)
+  const queries = candidates.slice(0, 10).map(line => line.slice(0, 300))
+  return queries.length ? queries : [jobDescription.trim().slice(0, 300)]
 }

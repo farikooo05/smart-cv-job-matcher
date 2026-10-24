@@ -1,6 +1,7 @@
 import type { Request, Response } from "express"
 import prisma from "../lib/prisma.js"
 import { extractCvProfile } from "../services/ai-provider.service.js"
+import { indexResumeWithAiService } from "../services/ai-service.client.js"
 import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -77,16 +78,25 @@ export const updateMasterCv = async (req: Request, res: Response): Promise<void>
       }
     })
 
-    // SEND WELCOME EMAIL (as requested by user in Turn 73)
+    let ragIndexed = false
+    let ragIndexMessage = ""
+    try {
+      const indexResult = await indexResumeWithAiService(userId, profile.parsedText.slice(0, 30_000))
+      ragIndexed = indexResult.indexedChunks > 0
+    } catch (indexError) {
+      ragIndexMessage = indexError instanceof Error ? indexError.message : "Semantic CV indexing is not available."
+      console.warn(`[RAG] CV saved but semantic indexing failed for user ${userId}: ${ragIndexMessage}`)
+    }
+
     if (process.env.RESEND_API_KEY) {
       await resend.emails.send({
         from: "onboarding@resend.dev",
         to: user.email,
-        subject: "✓ CV Indexed: background matching active!",
+        subject: "CV profile updated",
         html: `
-          <h1>Your CV is ready!</h1>
+          <h1>Your CV profile is ready</h1>
           <p>Hi ${user.name || 'there'},</p>
-          <p>We've successfully indexed your Master CV. Our automated agent will now search for jobs matching these skills:</p>
+          <p>We've updated your Master CV profile. Our automated job search will use these skills:</p>
           <p><strong>Keywords identified:</strong> ${profile.keywords.join(', ')}</p>
           <p>We'll notify you as soon as we find a match!</p>
         `
@@ -94,7 +104,11 @@ export const updateMasterCv = async (req: Request, res: Response): Promise<void>
     }
 
     res.json({
-      message: "Master CV updated successfully",
+      message: ragIndexed
+        ? "Master CV updated and semantic search index created."
+        : "Master CV profile updated, but semantic search indexing is not ready.",
+      ragIndexed,
+      ragIndexMessage,
       profile: {
         keywords: profile.keywords,
         summary: profile.summary,

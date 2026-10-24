@@ -6,6 +6,9 @@ services:
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
+      DATABASE_URL: postgresql://postgres:local_dev_password@db:5432/cv_matcher
+      OLLAMA_EMBEDDING_URL: ${OLLAMA_EMBEDDING_URL:-http://host.docker.internal:11434}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-bge-m3}
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
@@ -13,6 +16,9 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    depends_on:
+      db:
+        condition: service_healthy
   db:
     image: pgvector/pgvector:pg16
     container_name: smart-cv-job-matcher-db
