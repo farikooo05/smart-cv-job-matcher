@@ -1,260 +1,199 @@
-Team:
-Shukurov Elshan
-Valiyev Farid
-Mansurov Akshin
-Aliyev Anar
+# OptiJob — Smart CV & Job Matcher
 
-Supervisor: Javid Guliyev
-
-
-# Smart CV Job Matcher
-
-A smart web application that helps you find the best job opportunities by analyzing your CV and matching it with job postings. The system uses artificial intelligence to understand your skills and experience, then automatically finds suitable jobs for you.
+OptiJob is a full-stack application that compares a CV with a job description, explains matching and missing requirements with CV evidence, and helps users discover relevant vacancies.
 
 ## Features
 
-- **CV Analysis**: Upload your CV in PDF format. The application reads and extracts important information like skills, experience, and qualifications.
-- **Smart Job Matching**: Uses advanced AI technology to match your CV with job postings from different sources.
-- **Multi-language Support**: Works with English, Azerbaijani, and Russian. Your CV can be in any of these languages.
-- **User Account**: Create an account to save your CV, track job matches, and manage your applications.
-- **Real-time Updates**: The system regularly searches for new jobs and shows you new opportunities automatically.
-- **Job Recommendations**: Get personalized job suggestions based on your profile and skills.
+- **Evidence-based CV analysis:** compare a PDF CV with a pasted job description and show supported matches and missing requirements.
+- **Two integrated AI providers:** Google Gemini through the backend, or local Ollama.
+- **Local RAG workflow:** index CV sections in PostgreSQL with pgvector, retrieve relevant excerpts, and use them as evidence for local analysis.
+- **Requirement and keyword comparison:** surface relevant skills, terminology, and gaps.
+- **Profile and history:** save a master CV, review previous analyses, and manage a user profile.
+- **Job recommendations:** collect job listings and match them to a user's profile.
 
-## Project Structure
+## AI Providers and Deployment Notes
 
-### Backend
-The backend is built with Node.js and TypeScript. It handles all business logic, database operations, and AI processing.
+| Provider | Where it runs | What is required |
+| --- | --- | --- |
+| Gemini | Google Gemini API, called by the backend | A reachable backend with GEMINI_API_KEY configured as a server-side secret |
+| Ollama | Locally on the computer running the backend | Ollama plus the configured generation and embedding models |
 
-```
+The Ollama option is for a local setup; installing Ollama on one computer does not make it available to visitors of a public website. Do not put API keys in frontend code or commit them to Git. Configure secrets in the backend environment or hosting provider.
+
+## AI Analysis Demo
+
+The screenshots below show the same CV and internship description analyzed by the two providers integrated into OptiJob, followed by a separate manual comparison with Claude.
+
+### Gemini — 79%
+
+![OptiJob analysis result using Gemini](docs/assets/ai-demo/gemini-results.png)
+
+### Ollama — 72%
+
+![OptiJob analysis result using local Ollama](docs/assets/ai-demo/ollama-results.png)
+
+### Claude — 80% (external reference, not an OptiJob provider)
+
+![Manual CV and job-description comparison with Claude](docs/assets/ai-demo/claude-reference.png)
+
+**How to read this comparison:** Gemini and Ollama are selectable in the application. Claude was asked separately for a comparison; it is not connected to the application. These percentages are examples from model outputs, not standardized benchmark scores, so results are not directly comparable. In these examples, Credit risk and IFRS 9 are shown as missing because the CV does not provide evidence for them.
+
+The screenshots were captured from a local full-stack setup. A public frontend needs a deployed, reachable backend to run Gemini analyses online.
+
+### Quality evaluation
+
+The benchmark compares both providers on the same five human-labeled synthetic CV/job-description pairs (55 requirement decisions per provider). It reports requirement-level accuracy, precision, recall, F1, requirement coverage, exact-quote validity, and mean latency.
+
+| Provider | Accuracy | Precision | Recall | F1 | Requirement coverage | CV quote validity | Mean latency |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Gemini | 87.3% | 82.1% | 100% | 90.1% | 100% | 100% | 2.40 s |
+| Ollama (`qwen3:4b`) | 72.5% | 75.5% | 75% | 79.8% | 92.7% | 100% | 22.16 s |
+
+These results are a preliminary synthetic benchmark, not a general accuracy claim for real CVs. Both providers used the same five cases, but the small sample is not sufficient to estimate performance across real candidates and vacancies. See [the benchmark instructions and limitations](docs/evaluation/README.md) to reproduce it.
+
+## Architecture
+
+- **Frontend:** React and TypeScript application built with Vite.
+- **Backend API:** Express and TypeScript handles authentication, analysis records, profiles, and job APIs.
+- **AI service:** Python FastAPI service handles Gemini analysis and vector retrieval for the RAG workflow.
+- **Database:** PostgreSQL with pgvector stores application data and CV embeddings.
+- **Local inference:** Ollama runs on the host machine; the AI service container reaches the host Ollama endpoint for embeddings.
+
+~~~text
 backend/
-├── src/
-│   ├── controllers/     # Request handlers for different features
-│   ├── services/        # Business logic (CV analysis, job matching, AI)
-│   ├── routes/          # API endpoint definitions
-│   ├── middleware/      # Authentication, error handling, validation
-│   ├── lib/             # Helper functions and utilities
-│   └── cron.ts          # Automatic job search scheduling
-├── prisma/              # Database setup and migrations
-└── scratch/             # Test and development scripts
-```
+├── ai-service/       Python FastAPI service
+├── prisma/           Prisma schema and database setup
+└── src/
+    ├── controllers/  API request handlers
+    ├── middleware/   Authentication and request middleware
+    ├── routes/       API routes
+    └── services/     Analysis, retrieval, and application logic
 
-### Frontend
-The frontend is a modern React application built with Vite. It provides the user interface for uploading CVs and viewing job matches.
-
-```
 frontend/
 ├── src/
-│   ├── pages/           # Different screens (Login, Dashboard, etc.)
-│   ├── components/      # UI components (buttons, cards, etc.)
-│   ├── services/        # Functions to call the API
-│   ├── contexts/        # Authentication and global state
-│   └── types/           # TypeScript type definitions
-└── public/              # Static files
-```
+│   ├── components/   Reusable UI components
+│   ├── pages/        Application pages
+│   ├── services/     Backend API clients
+│   └── contexts/     Authentication and application state
+└── public/           Static assets
+~~~
 
 ## Technology Stack
 
-### Backend
-- **Framework**: Express.js (Node.js)
-- **Language**: TypeScript
-- **Database**: PostgreSQL with Prisma ORM
-- **AI**: Google Generative AI (Gemini)
-- **PDF Processing**: pdf-parse
-- **Authentication**: JWT tokens
-- **Email**: Resend
-- **Web Scraping**: Cheerio and Axios
-- **Task Scheduling**: node-cron
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Radix UI, React Router
+- **Backend:** Node.js, Express 5, TypeScript
+- **AI:** Google Gemini API, Ollama, FastAPI, Pydantic
+- **Data and retrieval:** PostgreSQL, Prisma, pgvector, embeddings, vector search
+- **Other:** PDF parsing, JWT authentication, job scraping, scheduled tasks
 
-### Frontend
-- **Framework**: React 19
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **UI Components**: Radix UI
-- **Routing**: React Router
-- **Charts**: Recharts
-- **Language**: TypeScript
-
-## Getting Started
+## Run Locally
 
 ### Prerequisites
-You need to have these installed on your computer:
-- Node.js (version 18 or newer)
-- npm (comes with Node.js)
-- PostgreSQL database
 
-### Installation and Setup
+- Node.js 18 or newer and npm
+- Docker Desktop with the WSL 2 engine
+- Ollama, if you want to use Local AI (Ollama)
 
-#### 1. Clone the repository
-```bash
-git clone <your-repository-url>
-cd smart-cv-job-matcher
-```
+### 1. Configure environment variables
 
-#### 2. Setup Backend
+From the project root, copy the template and edit the local values:
 
-Navigate to the backend folder:
-```bash
-cd backend
-```
+~~~powershell
+Copy-Item backend/.env.example backend/.env
+~~~
 
-Install dependencies:
-```bash
-npm install
-```
+Set strong local values for JWT secrets. Add a Gemini API key only if you plan to use Gemini. Keep backend/.env private; it must not be committed.
 
-Create a `.env` file in the backend folder with these settings:
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/cv_matcher
-FRONTEND_URL=http://localhost:5173
-PORT=5000
-GEMINI_API_KEY=your_google_api_key
-RESEND_API_KEY=your_resend_api_key
-JWT_SECRET=your_secret_key
-```
+### 2. Start PostgreSQL
 
-Setup the database:
-```bash
-npm run db:migrate
-npm run db:generate
-```
+Start only the database first:
 
-Start the backend server:
-```bash
+~~~powershell
+docker compose --env-file backend/.env up -d db
+~~~
+
+### 3. Install backend dependencies and prepare a fresh database
+
+Run these commands before starting the AI service on a fresh local database. The AI service creates the separate resume_chunks vector table when it starts.
+
+~~~powershell
+Set-Location backend
+npm ci
+npx prisma db push
+npx prisma generate
 npm run dev
-```
+~~~
 
-The backend will run on `http://localhost:5000`
+The Express API runs at http://localhost:5000.
 
-#### 3. Setup Frontend
+> Do not run Prisma db push against an existing database containing RAG data without checking its proposed changes. The current Prisma migration history was originally created for SQLite, while the active schema uses PostgreSQL; applying that old migration history to PostgreSQL is not supported.
 
-In a new terminal, navigate to the frontend folder:
-```bash
-cd frontend
-```
+### 4. Start the AI service
 
-Install dependencies:
-```bash
-npm install
-```
+In a new terminal at the project root:
 
-Start the development server:
-```bash
+~~~powershell
+docker compose --env-file backend/.env up -d ai-service
+~~~
+
+The FastAPI service is available at http://localhost:8000. PostgreSQL is exposed at localhost:5432.
+
+### 5. Install Ollama models (optional)
+
+To use Local AI (Ollama), install and start Ollama, then download the configured models:
+
+~~~powershell
+ollama pull qwen3:4b
+ollama pull bge-m3
+~~~
+
+Keep Ollama running while using the local provider. Gemini does not require Ollama.
+
+### 6. Start the frontend
+
+In another terminal:
+
+~~~powershell
+Set-Location frontend
+npm ci
 npm run dev
-```
+~~~
 
-The frontend will run on `http://localhost:5173`
+Open http://localhost:5173, create an account, upload a PDF CV, paste a job description, and select Gemini or Local AI (Ollama).
 
-## How to Use
+## Environment and Secrets
 
-1. **Open the application** in your web browser at `http://localhost:5173`
-2. **Create an account** or log in if you already have one
-3. **Upload your CV** as a PDF file
-4. **View your matches** - the system will analyze your CV and show you matching job opportunities
-5. **Apply for jobs** - click on interesting job listings and apply directly
+The template is backend/.env.example. At minimum, configure database connection values and JWT secrets for local development. Configure GEMINI_API_KEY for Gemini. Other integrations, such as Google sign-in or email, require their corresponding server-side credentials.
 
-## API Endpoints
+Never commit backend/.env, API keys, passwords, or production secrets. For deployment, set secrets in the backend hosting provider's environment-variable settings.
 
-### Authentication
-- `POST /auth/register` - Create a new account
-- `POST /auth/login` - Log in to your account
-- `POST /auth/logout` - Log out
+## Build
 
-### User Profile
-- `GET /users/profile` - Get your profile information
-- `PUT /users/profile` - Update your profile
-- `POST /users/upload-cv` - Upload your CV
-
-### Job Matching
-- `GET /analysis/matches` - Get your job matches
-- `POST /analysis/analyze` - Analyze your CV
-- `GET /analysis/history` - View your analysis history
-
-## Development
-
-### Running Tests
-Some test files are available in the `backend/scratch` folder. To run a test:
-```bash
-npm run dev -- scratch/test_filename.ts
-```
-
-### Database Management
-View and edit database data using Prisma Studio:
-```bash
-npm run db:studio
-```
-
-### Build for Production
-
-**Backend:**
-```bash
+~~~powershell
+Set-Location backend
 npm run build
-npm run start
-```
 
-**Frontend:**
-```bash
+Set-Location ../frontend
 npm run build
-```
+~~~
 
-This creates a `dist` folder with optimized files ready for production.
+## Project Team
 
-## Project Database
+- Shukurov Elshan
+- Valiyev Farid
+- Mansurov Akshin
+- Aliyev Anar
 
-The application uses PostgreSQL database with the following main tables:
+Supervisor: Javid Guliyev
 
-- **users**: Stores user account information
-- **cvs**: Stores uploaded CV data
-- **jobs**: Stores job listings
-- **job_matches**: Stores the matching results between CVs and jobs
+## Future Work
 
-Database migrations are stored in `backend/prisma/migrations/`
-
-## Troubleshooting
-
-### Backend won't start
-- Check if PostgreSQL is running
-- Make sure your `.env` file has the correct database URL
-- Try running migrations again: `npm run db:migrate`
-
-### Frontend won't load
-- Check if the backend is running on port 5000
-- Try clearing your browser cache
-- Make sure you're using the correct frontend URL in `.env`
-
-### CV upload fails
-- Make sure your PDF file is not too large (max 10MB recommended)
-- Check if the file is a valid PDF
-- Try uploading a different PDF file
-
-## Contributing
-
-We welcome contributions! If you find bugs or want to add new features:
-
-1. Create a new branch for your work
-2. Make your changes
-3. Test thoroughly
-4. Submit a pull request with a description of your changes
+- Add and validate more job sources.
+- Improve CV parsing and multilingual matching.
+- Expand job alerts and profile insights.
+- Explore a mobile experience.
 
 ## License
 
 This project is private and confidential.
-
-## Support
-
-If you have questions or need help:
-- Check the troubleshooting section above
-- Review the code comments in relevant files
-- Check the database schema in `backend/prisma/schema.prisma`
-
-## Future Plans
-
-- Add more job sources
-- Improve CV parsing accuracy
-- Add job alerts and notifications
-- Expand language support
-- Create mobile application
-- Add advanced filtering options
-
-
-
 

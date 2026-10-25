@@ -1,7 +1,6 @@
 import type { Request, Response } from "express"
 import prisma from "../lib/prisma.js"
-import { analyzeWithGemini, type GeminiAnalysisResult } from "../services/gemini.service.js"
-import { runBasicAnalysis, runBasicProfileExtraction } from "../services/fallback.service.js"
+import { analyzeCv, getAiProvider } from "../services/ai-provider.service.js"
 import { runFullScrape } from "../services/scraper.service.js"
 import { runMatchingCycle } from "../services/matching.service.js"
 
@@ -10,7 +9,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
   
   try {
     const userId = req.userId as string
-    const { jobDescription } = req.body
+    const { jobDescription, aiProvider } = req.body
     const file = req.file
 
     if (!file) {
@@ -28,54 +27,10 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
     }
 
     console.log(`[Analysis] Calling AI service...`)
-    let result: GeminiAnalysisResult
-    let isAiAnalysis = true
-
-    try {
-      result = await analyzeWithGemini(file.buffer, file.mimetype, jobDescription)
-      console.log(`[Analysis] Gemini service returned success. Scoring: ${result.compatibilityScore}`)
-    } catch (aiError: any) {
-      // Check for Gemini Quota, Transient Error, or Local Test Mode
-      const isTransient = 
-        aiError.status === 429 || 
-        aiError.status === 503 || 
-        aiError.message?.includes("429") || 
-        aiError.message?.includes("503") || 
-        aiError.message?.includes("quota") ||
-        aiError.message?.includes("AI_FORCE_OFFLINE")
-      
-      if (isTransient) {
-        console.warn(`[Analysis] Gemini forced offline or limit hit. Falling back to basic analysis...`)
-        
-        // 1. Extract skills directly from the newly uploaded PDF
-        let multilingualSkills: any[] = []
-        try {
-          const extracted = await runBasicProfileExtraction(file.buffer)
-          multilingualSkills = extracted.multilingualSkills
-          console.log(`[Analysis] Extracted ${multilingualSkills.length} skills from uploaded PDF for one-off analysis.`)
-        } catch (extractError) {
-          console.warn(`[Analysis] Local extraction from PDF failed, falling back to Master Profile...`)
-          // 2. Fallback to Master Profile only if PDF extraction fails
-          try {
-            const user = await prisma.user.findUnique({
-              where: { id: userId },
-              select: { cvSkillsMultilingual: true }
-            })
-            if (user?.cvSkillsMultilingual) {
-              multilingualSkills = JSON.parse(user.cvSkillsMultilingual)
-            }
-          } catch (dbError) {
-            console.warn(`[Analysis] Failed to fetch user synonyms for fallback.`)
-          }
-        }
-
-        result = await runBasicAnalysis(file.buffer, jobDescription, multilingualSkills)
-        isAiAnalysis = false
-      } else {
-        // Rethrow if it's a different kind of error (e.g. invalid file)
-        throw aiError
-      }
-    }
+    const provider = getAiProvider(aiProvider)
+    const result = await analyzeCv(file.buffer, file.mimetype, jobDescription, provider, userId)
+    const isAiAnalysis = true
+    console.log(`[Analysis] AI provider returned success. Scoring: ${result.compatibilityScore}`)
 
     console.log(`[Analysis] Saving to Database... (AI: ${isAiAnalysis})`)
     const analysis = await prisma.analysis.create({
@@ -95,6 +50,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
         suggestions: JSON.stringify(result.suggestions),
         summary: result.summary,
         isAiAnalysis,
+        aiProvider: provider,
       },
     })
     console.log(`[Analysis] Database record created: ${analysis.id}`)
@@ -115,6 +71,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
         suggestions: result.suggestions,
         summary: analysis.summary,
         isAiAnalysis: analysis.isAiAnalysis,
+        aiProvider: analysis.aiProvider,
         createdAt: analysis.createdAt,
       },
     })
@@ -123,6 +80,11 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
     console.error(`- Status: ${error.status || 'N/A'}`)
     console.error(`- Message: ${error.message}`)
     if (error.errorDetails) console.error(`- Details: ${JSON.stringify(error.errorDetails)}`)
+
+    if (error.statusCode && error.code?.startsWith("AI_")) {
+      res.status(error.statusCode).json({ error: error.message, code: error.code })
+      return
+    }
     
     // Check if it's a Prisma error specifically
     if (error.code && error.clientVersion) {
@@ -220,6 +182,7 @@ export const getAnalysisById = async (req: Request, res: Response): Promise<void
         suggestions: JSON.parse(analysis.suggestions),
         summary: analysis.summary,
         isAiAnalysis: analysis.isAiAnalysis,
+        aiProvider: analysis.aiProvider,
         createdAt: analysis.createdAt,
       },
     })

@@ -89,8 +89,12 @@ export default function ProfilePage() {
     const toastId = toast.loading("Analyzing your CV...")
     
     try {
-      await userService.uploadMasterCv(file)
-      toast.success("Master CV indexed successfully!", { id: toastId })
+      const result = await userService.uploadMasterCv(file)
+      if (result.ragIndexed) {
+        toast.success("Master CV uploaded and semantic index created.", { id: toastId })
+      } else {
+        toast.warning(result.ragIndexMessage || "CV profile was saved, but semantic indexing is not ready.", { id: toastId })
+      }
       fetchProfile()
     } catch (error) {
       toast.error("Failed to upload CV", { id: toastId })

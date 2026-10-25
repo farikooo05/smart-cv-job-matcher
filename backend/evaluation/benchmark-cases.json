@@ -1,0 +1,32 @@
+[
+  {
+    "id": "synthetic-01-direct-evidence",
+    "cv": "BSc Computer Science student. Skills: Python, PostgreSQL, probability and statistics, scikit-learn, LLM integration, RAG, and prompt engineering. English: C1. No credit-risk, IFRS 9, or AI-agent experience listed.",
+    "job": "AI model validation internship. Requirements: Python, SQL, statistics, machine learning, GenAI and LLMs, prompt engineering, RAG, English proficiency, credit risk, IFRS 9, and AI agents.",
+    "matched": ["Python", "SQL", "Statistics", "Machine learning", "GenAI and LLMs", "Prompt engineering", "RAG", "English proficiency"]
+  },
+  {
+    "id": "synthetic-02-equivalent-terms",
+    "cv": "Final-year mathematics student. Built Python data-analysis projects with MySQL. Studied statistical modelling and ML with scikit-learn. Created a retrieval-augmented generation demo using large language models and prompt design. English — Advanced (C1). Coursework covered credit scoring and expected credit losses under IFRS 9. Built a question-answering AI agent.",
+    "job": "AI model validation internship. Requirements: Python, SQL, statistics, machine learning, GenAI and LLMs, prompt engineering, RAG, English proficiency, credit risk, IFRS 9, and AI agents.",
+    "matched": ["Python", "SQL", "Statistics", "Machine learning", "GenAI and LLMs", "Prompt engineering", "RAG", "English proficiency", "Credit risk", "IFRS 9", "AI agents"]
+  },
+  {
+    "id": "synthetic-03-aspirational-mentions",
+    "cv": "Bachelor of Arts graduate. Career objective: move into credit risk. Interested in learning Python, SQL, machine learning, and generative AI. No experience with IFRS 9, RAG, prompt engineering, or AI agents. English: B2.",
+    "job": "AI model validation internship. Requirements: Python, SQL, statistics, machine learning, GenAI and LLMs, prompt engineering, RAG, English proficiency, credit risk, IFRS 9, and AI agents.",
+    "matched": ["English proficiency"]
+  },
+  {
+    "id": "synthetic-04-tools-without-language-claim",
+    "cv": "Data science undergraduate. Used pandas, NumPy, PostgreSQL, and scikit-learn for coursework. Applied probability and statistical analysis, trained classification models, and built a RAG prototype with embeddings and vector search. Integrated an LLM API. The CV does not state Python proficiency, English level, prompt engineering, credit risk, IFRS 9, or AI-agent work.",
+    "job": "AI model validation internship. Requirements: Python, SQL, statistics, machine learning, GenAI and LLMs, prompt engineering, RAG, English proficiency, credit risk, IFRS 9, and AI agents.",
+    "matched": ["SQL", "Statistics", "Machine learning", "GenAI and LLMs", "RAG"]
+  },
+  {
+    "id": "synthetic-05-abbreviations-and-negatives",
+    "cv": "Computer science student. Technical skills: Python, SQL, statistics, ML, and LLM applications. English C1. Built an AI agent for a university project. Has not worked with credit risk or IFRS 9; no RAG or prompt-engineering projects listed.",
+    "job": "AI model validation internship. Requirements: Python, SQL, statistics, machine learning, GenAI and LLMs, prompt engineering, RAG, English proficiency, credit risk, IFRS 9, and AI agents.",
+    "matched": ["Python", "SQL", "Statistics", "Machine learning", "GenAI and LLMs", "English proficiency", "AI agents"]
+  }
+]

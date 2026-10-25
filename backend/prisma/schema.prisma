@@ -50,6 +50,7 @@ model Analysis {
   suggestions         String
   summary             String
   isAiAnalysis        Boolean  @default(true)
+  aiProvider          String?
   createdAt           DateTime @default(now())
 
   @@index([userId])

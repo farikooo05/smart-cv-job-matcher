@@ -20,10 +20,10 @@ export const userService = {
     return api<UserProfileResponse>("/api/user/profile")
   },
 
-  uploadMasterCv: async (file: File): Promise<{ message: string; profile: any }> => {
+  uploadMasterCv: async (file: File): Promise<{ message: string; ragIndexed: boolean; ragIndexMessage: string; profile: any }> => {
     const formData = new FormData()
     formData.append("cv", file)
-    return api<{ message: string; profile: any }>("/api/user/cv", {
+    return api<{ message: string; ragIndexed: boolean; ragIndexMessage: string; profile: any }>("/api/user/cv", {
       method: "POST",
       body: formData,
       isFormData: true

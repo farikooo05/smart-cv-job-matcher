@@ -1,24 +1,8 @@
 import prisma from "../lib/prisma.js"
-import { matchJobsWithGemini, isAiOverloaded, GeminiAnalysisResult } from "./gemini.service.js"
-import { runTextAnalysis } from "./fallback.service.js"
+import { matchJobToCv, getAiProvider } from "./ai-provider.service.js"
 import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-
-/** 
- * Normalizes Azerbaijani text for robust keyword matching
- */
-const normalizeText = (text: string): string => {
-  return text
-    .toLocaleLowerCase("az-AZ")
-    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, (match) => {
-      if (['#', '+', '.', '-'].includes(match)) return match
-      return ""
-    })
-    .replace(/\s{2,}/g, " ")
-    .normalize("NFC")
-    .trim()
-}
 
 /**
  * Yields the event loop to prevent the Node.js thread from freezing during heavy processing.
@@ -26,40 +10,11 @@ const normalizeText = (text: string): string => {
 const yieldEventLoop = () => new Promise(resolve => setTimeout(resolve, 0))
 
 const processUserMatches = async (user: any, recentJobs: any[], targetUserId?: string) => {
-  let multilingualSkills: any[] = []
-  let searchTerms: string[] = []
-
-  try {
-    if (user.cvSkillsMultilingual) {
-      multilingualSkills = JSON.parse(user.cvSkillsMultilingual)
-      searchTerms = multilingualSkills.flatMap((s: any) => [
-        normalizeText(s.en),
-        normalizeText(s.az),
-        normalizeText(s.ru)
-      ]).filter((t: string) => t.length > 0)
-    } else if (user.cvKeywords) {
-      searchTerms = JSON.parse(user.cvKeywords).map((k: string) => normalizeText(k))
-    }
-
-    if (user.cvSummary) {
-      const summaryKeywords = user.cvSummary
-        .split(/[.!,?]/)[0]
-        .split(/\s+/)
-        .filter((word: string) => word.length > 5)
-        .map((word: string) => normalizeText(word))
-      
-      searchTerms = [...new Set([...searchTerms, ...summaryKeywords])]
-    }
-  } catch (e) {
-    console.warn(`[Matching] Failed to parse keywords for ${user.email}`)
+  const cvText = user.cvText?.trim()
+  if (!cvText) {
+    console.warn(`[Matching] Skipping ${user.email}: no extracted CV text is stored.`)
+    return
   }
-
-  console.log(`[Matching] User ${user.email} has ${searchTerms.length} search variants across all languages.`)
-  if (targetUserId) {
-    console.log(`[Matching] [DEBUG] Current search terms: ${searchTerms.join(', ')}`)
-  }
-
-  if (searchTerms.length === 0) return
 
   let newMatchCount = 0
   const matchesFound: any[] = []
@@ -73,60 +28,38 @@ const processUserMatches = async (user: any, recentJobs: any[], targetUserId?: s
     })
     if (existingMatch) continue
 
-    const jobText = normalizeText(`${job.title} ${job.company} ${job.description || ""}`)
-    
-    const isPotentialMatch = searchTerms.some((term: string) => {
-      if (jobText.includes(term)) return true
-      const coreWords = term.split(/\s+/).filter(w => w.length > 4)
-      return coreWords.some(word => jobText.includes(word))
-    })
+    if (!job.description?.trim()) {
+      console.warn(`[Matching] Skipping ${job.title}: no job description is available for AI analysis.`)
+      continue
+    }
 
-    if (isPotentialMatch) {
-      console.log(`[Matching] 🎯 Match confirmed for ${user.email} -> ${job.title}. Analyzing with AI...`)
+    console.log(`[Matching] Analyzing ${job.title} for ${user.email} with ${getAiProvider()}...`)
 
-      try {
-        let result: any
-        let usedAi = false
-
-        if (isAiOverloaded()) {
-          console.log(`[Matching] ⚡ AI Overloaded. Using Dynamic Fallback for ${job.title}`)
-          const cvText = user.cvText || "N/A"
-          const jdText = `Job Title: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description || "Refer to URL"}`
-          result = runTextAnalysis(cvText, jdText, multilingualSkills)
-          usedAi = false
-        } else {
-          // AI requires rate limiting
-          await new Promise(resolve => setTimeout(resolve, 5000))
-
-          const cvText = user.cvText || "N/A"
-          const jdText = `Job Title: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description || job.title}`
-
-          result = await matchJobsWithGemini(cvText, jdText)
-          usedAi = true
-        }
-
-        if (usedAi) {
-          console.log(`[Matching] ✨ AI Analysis complete. Score: ${result.compatibilityScore}% for ${job.title}`)
-        }
-
-        if (result.compatibilityScore >= 50) {
-          const match = await prisma.jobMatch.create({
-            data: {
-              userId: user.id,
-              jobId: job.id,
-              score: result.compatibilityScore,
-              summary: result.summary,
-              matchingSkills: JSON.stringify(result.matchingSkills),
-              missingRequirements: JSON.stringify(result.missingRequirements),
-              isAiAnalysis: usedAi
-            }
-          })
-          newMatchCount++
-          matchesFound.push({ title: job.title, company: job.company, score: match.score })
-        }
-      } catch (error) {
-        // Quietly skip AI parsing errors
+    try {
+      if (getAiProvider() === "gemini") {
+        await new Promise(resolve => setTimeout(resolve, 5000))
       }
+
+      const jdText = `Job Title: ${job.title}\nCompany: ${job.company}\nDescription: ${job.description}`
+      const result = await matchJobToCv(cvText, jdText, user.id)
+
+      if (result.compatibilityScore >= 50) {
+        const match = await prisma.jobMatch.create({
+          data: {
+            userId: user.id,
+            jobId: job.id,
+            score: result.compatibilityScore,
+            summary: result.summary,
+            matchingSkills: JSON.stringify(result.matchingSkills),
+            missingRequirements: JSON.stringify(result.missingRequirements),
+            isAiAnalysis: true
+          }
+        })
+        newMatchCount++
+        matchesFound.push({ title: job.title, company: job.company, score: match.score })
+      }
+    } catch (error) {
+      console.error(`[Matching] AI analysis failed for ${job.title}:`, error)
     }
   }
 
