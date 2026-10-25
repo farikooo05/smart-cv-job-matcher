@@ -21,6 +21,7 @@ export interface AnalysisResult {
   }[]
   summary: string
   isAiAnalysis: boolean
+  aiProvider: AnalysisAiProvider | null
   createdAt: string
 }
 

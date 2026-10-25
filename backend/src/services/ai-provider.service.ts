@@ -72,6 +72,22 @@ const extractRetrievalQueries = (jobDescription: string): string[] => {
     .split(/\r?\n|(?<=[.!?;])\s+/)
     .map(line => line.replace(/^\s*[-*•\d.)]+\s*/, "").trim())
     .filter(line => line.length >= 20)
-  const queries = candidates.slice(0, 10).map(line => line.slice(0, 300))
+  const hasEnglishRequirement = candidates.some(line =>
+    /\bEnglish\b/i.test(line) && /proficien|fluent|advanced|written|language|documentation|report/i.test(line),
+  )
+  const priorityQueries = [
+    ...(hasEnglishRequirement ? ["English language proficiency CEFR level C1 C2 fluent advanced"] : []),
+    ...(candidates.some(line => /\bcredit\s+risk\b/i.test(line)) ? ["credit risk credit scoring loan default risk lending"] : []),
+    ...(candidates.some(line => /\bIFRS\s*9\b/i.test(line)) ? ["IFRS 9 expected credit loss ECL"] : []),
+    ...(candidates.some(line => /\bSQL\b|\bstatistics\b|\bmachine learning\b/i.test(line))
+      ? ["Python SQL statistics machine learning relevant degree"] : []),
+    ...(candidates.some(line => /\b(?:GenAI|generative AI|LLMs?|RAG|AI agents?)\b/i.test(line))
+      ? ["GenAI generative AI LLM prompt engineering RAG AI agents"] : []),
+  ]
+  const generalQueryLimit = Math.max(0, 10 - priorityQueries.length)
+  const queries = [
+    ...candidates.slice(0, generalQueryLimit).map(line => line.slice(0, 300)),
+    ...priorityQueries,
+  ]
   return queries.length ? queries : [jobDescription.trim().slice(0, 300)]
 }

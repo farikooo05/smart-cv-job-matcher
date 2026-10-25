@@ -1,6 +1,6 @@
 import type { Request, Response } from "express"
 import prisma from "../lib/prisma.js"
-import { analyzeCv } from "../services/ai-provider.service.js"
+import { analyzeCv, getAiProvider } from "../services/ai-provider.service.js"
 import { runFullScrape } from "../services/scraper.service.js"
 import { runMatchingCycle } from "../services/matching.service.js"
 
@@ -27,7 +27,8 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
     }
 
     console.log(`[Analysis] Calling AI service...`)
-    const result = await analyzeCv(file.buffer, file.mimetype, jobDescription, aiProvider, userId)
+    const provider = getAiProvider(aiProvider)
+    const result = await analyzeCv(file.buffer, file.mimetype, jobDescription, provider, userId)
     const isAiAnalysis = true
     console.log(`[Analysis] AI provider returned success. Scoring: ${result.compatibilityScore}`)
 
@@ -49,6 +50,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
         suggestions: JSON.stringify(result.suggestions),
         summary: result.summary,
         isAiAnalysis,
+        aiProvider: provider,
       },
     })
     console.log(`[Analysis] Database record created: ${analysis.id}`)
@@ -69,6 +71,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
         suggestions: result.suggestions,
         summary: analysis.summary,
         isAiAnalysis: analysis.isAiAnalysis,
+        aiProvider: analysis.aiProvider,
         createdAt: analysis.createdAt,
       },
     })
@@ -179,6 +182,7 @@ export const getAnalysisById = async (req: Request, res: Response): Promise<void
         suggestions: JSON.parse(analysis.suggestions),
         summary: analysis.summary,
         isAiAnalysis: analysis.isAiAnalysis,
+        aiProvider: analysis.aiProvider,
         createdAt: analysis.createdAt,
       },
     })

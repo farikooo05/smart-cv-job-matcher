@@ -3,6 +3,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+MAX_REQUIREMENTS = 20
+
+
 class AnalyzeRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
@@ -29,7 +32,7 @@ class GeminiAssessmentResponse(BaseModel):
     job: JobInfo
     cvKeywords: list[str] = Field(max_length=30)
     jdKeywords: list[str] = Field(max_length=30)
-    requirementAssessments: list[RequirementAssessment] = Field(max_length=10)
+    requirementAssessments: list[RequirementAssessment] = Field(max_length=MAX_REQUIREMENTS)
 
 
 class SkillSummary(BaseModel):

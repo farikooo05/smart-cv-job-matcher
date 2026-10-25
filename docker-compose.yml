@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
       DATABASE_URL: postgresql://postgres:local_dev_password@db:5432/cv_matcher
       OLLAMA_EMBEDDING_URL: ${OLLAMA_EMBEDDING_URL:-http://host.docker.internal:11434}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-bge-m3}

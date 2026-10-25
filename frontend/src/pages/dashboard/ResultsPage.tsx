@@ -20,6 +20,31 @@ import {
 import { analysisService, type AnalysisResult } from "../../services/analysis.service"
 import { toast } from "sonner"
 import { AlertTriangle } from "lucide-react"
+import { Badge } from "../../components/ui/badge"
+
+const normalizeKeyword = (keyword: string) => keyword.toLocaleLowerCase().replace(/[^a-z0-9+#.]+/g, " ").trim()
+
+const keywordsMatch = (left: string, right: string) => {
+  const a = normalizeKeyword(left)
+  const b = normalizeKeyword(right)
+  if (!a || !b) return false
+  if (a === b) return true
+
+  // SQL is commonly listed through a specific SQL database (for example PostgreSQL).
+  const sqlDatabases = /\b(?:postgres(?:ql)?|mysql|mariadb|sqlite|microsoft sql server|sql server|tsql)\b/
+  const isSql = (value: string) => value === "sql" || sqlDatabases.test(value)
+  if (isSql(a) && isSql(b)) return true
+
+  // Treat LLM/GenAI terminology and the RAG components used to implement it as related evidence.
+  const genAiOrRag = /\b(?:genai|generative ai|llm|llms|large language models?|rag|embeddings?|vector search|vector databases?|pgvector)\b/
+  if (genAiOrRag.test(a) && genAiOrRag.test(b)) return true
+
+  const machineLearning = (value: string) =>
+    /\bmachine learning\b|\bml\b|\bscikit learn\b|\btensorflow\b|\bkeras\b|\bneural networks?\b|\bcnns?\b/i.test(value)
+  if (machineLearning(a) && machineLearning(b)) return true
+
+  return a.includes(b) || b.includes(a)
+}
 
 export default function ResultsPage() {
   const { id } = useParams<{ id: string }>()
@@ -94,6 +119,13 @@ export default function ResultsPage() {
 
         {/* Action Buttons */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
+          <Badge className="border-success/30 bg-success/10 px-3 py-1 text-sm font-semibold text-success">
+            AI provider: {analysis.aiProvider === "gemini"
+              ? "Gemini"
+              : analysis.aiProvider === "ollama"
+                ? "Ollama"
+                : "Not recorded"}
+          </Badge>
           <Button variant="outline" size="sm" className="gap-2">
             <Share2 className="h-4 w-4" />
             Share
@@ -119,11 +151,11 @@ export default function ResultsPage() {
               <div className="mt-6 grid grid-cols-2 gap-4">
                 <div className="rounded-xl bg-success/10 p-3">
                   <p className="text-2xl font-bold text-success">{analysis.matchingSkills.length}</p>
-                  <p className="text-xs text-muted-foreground">Matched Skills</p>
+                  <p className="text-xs text-muted-foreground">Matched Requirements</p>
                 </div>
                 <div className="rounded-xl bg-destructive/10 p-3">
                   <p className="text-2xl font-bold text-destructive">{analysis.missingRequirements.length}</p>
-                  <p className="text-xs text-muted-foreground">Missing Skills</p>
+                  <p className="text-xs text-muted-foreground">Requirements to Develop</p>
                 </div>
               </div>
               <Link to="/dashboard/insights" className="mt-6 block">
@@ -147,23 +179,25 @@ export default function ResultsPage() {
               <div className="mb-6">
                 <div className="mb-3 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-success" />
-                  <h3 className="font-medium text-foreground">Matching Skills</h3>
+                  <h3 className="font-medium text-foreground">Matched Requirements</h3>
                   <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">
                     {analysis.matchingSkills.length} found
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {analysis.matchingSkills.map((skill) => (
-                    <SkillTag key={skill} skill={skill} type="matched" />
+                    <span key={skill} title={skill}>
+                      <SkillTag skill={skill.split(" — CV evidence")[0].trim()} type="matched" />
+                    </span>
                   ))}
                 </div>
               </div>
 
-              {/* Missing Skills */}
+              {/* Requirements to develop */}
               <div>
                 <div className="mb-3 flex items-center gap-2">
                   <XCircle className="h-4 w-4 text-destructive" />
-                  <h3 className="font-medium text-foreground">Missing Skills</h3>
+                  <h3 className="font-medium text-foreground">Requirements to Develop</h3>
                   <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
                     {analysis.missingRequirements.length} missing
                   </span>
@@ -216,7 +250,7 @@ export default function ResultsPage() {
                 <div className="rounded-xl border border-border bg-secondary/30 p-4">
                   <div className="flex flex-wrap gap-2">
                     {analysis.cvKeywords.map((keyword) => {
-                      const isMatched = analysis.jdKeywords.includes(keyword)
+                      const isMatched = analysis.jdKeywords.some(jobKeyword => keywordsMatch(keyword, jobKeyword))
                       return (
                         <span
                           key={keyword}
@@ -243,7 +277,8 @@ export default function ResultsPage() {
                 <div className="rounded-xl border border-border bg-secondary/30 p-4">
                   <div className="flex flex-wrap gap-2">
                     {analysis.jdKeywords.map((keyword) => {
-                      const isMatched = analysis.cvKeywords.includes(keyword)
+                      const isMatched = analysis.cvKeywords.some(cvKeyword => keywordsMatch(cvKeyword, keyword))
+                        || analysis.matchingSkills.some(matchedSkill => keywordsMatch(matchedSkill, keyword))
                       return (
                         <span
                           key={keyword}

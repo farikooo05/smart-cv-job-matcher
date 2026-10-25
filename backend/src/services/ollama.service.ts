@@ -8,14 +8,14 @@ const analysisSchema = z.object({
     company: z.string(),
     date: z.string(),
   }),
-  cvKeywords: z.array(z.string()).max(12),
-  jdKeywords: z.array(z.string()).max(12),
+  cvKeywords: z.array(z.string()).max(6),
+  jdKeywords: z.array(z.string()).max(6),
   requirementAssessments: z.array(z.object({
     requirement: z.string(),
     status: z.enum(["matched", "missing"]),
     jobEvidence: z.string(),
     cvEvidence: z.string(),
-  })).max(6),
+  })).max(5),
 })
 
 const ANALYSIS_JSON_SCHEMA = {
@@ -32,11 +32,11 @@ const ANALYSIS_JSON_SCHEMA = {
       },
       required: ["title", "company", "date"],
     },
-    cvKeywords: { type: "array", maxItems: 12, items: { type: "string" } },
-    jdKeywords: { type: "array", maxItems: 12, items: { type: "string" } },
+    cvKeywords: { type: "array", maxItems: 6, items: { type: "string" } },
+    jdKeywords: { type: "array", maxItems: 6, items: { type: "string" } },
     requirementAssessments: {
       type: "array",
-      maxItems: 6,
+      maxItems: 5,
       items: {
         type: "object",
         additionalProperties: false,
@@ -80,11 +80,129 @@ const normalizeEvidence = (text: string): string => text.normalize("NFKC").repla
 const isVerbatimEvidence = (source: string, evidence: string): boolean =>
   !!evidence.trim() && normalizeEvidence(source).includes(normalizeEvidence(evidence))
 
+const findEnglishRequirement = (jobDescription: string): string | undefined => {
+  const sentence = jobDescription
+    .split(/\r?\n|(?<=[.!?])\s+/)
+    .map(part => part.trim())
+    .find(part =>
+      /\bEnglish\b/i.test(part) && /proficien|fluent|advanced|written|language|documentation|report/i.test(part),
+    )
+  return sentence?.split(/\s+/).slice(0, 14).join(" ")
+}
+
+const findEnglishEvidence = (chunks: RetrievedResumeChunk[]): { quote: string; chunk: RetrievedResumeChunk } | undefined => {
+  for (const chunk of chunks) {
+    for (const line of chunk.text.split(/\r?\n/)) {
+      const evidence = line.match(/\bEnglish\b\s*[:—-]?\s*\(?\s*(?:C[12]|B[12]|A[12]|native|bilingual|fluent|advanced|upper[- ]intermediate|intermediate|basic)\b/i)?.[0]
+      if (evidence && isVerbatimEvidence(chunk.text, evidence)) return { quote: evidence.trim(), chunk }
+    }
+  }
+  return undefined
+}
+
+const supportsWorkplaceEnglish = (cvEvidence: string, jobEvidence: string): boolean =>
+  !/\bnative\b|\bbilingual\b|\bmother tongue\b/i.test(jobEvidence)
+  && /\b(?:C1|C2|fluent|advanced)\b/i.test(cvEvidence)
+
+const extractSqlKeyword = (source: string): string[] => {
+  const database = source.match(/\b(?:PostgreSQL|Postgres|MySQL|MariaDB|SQLite|SQL Server|T-SQL)\b/i)?.[0]
+  if (database) return [database]
+  return /\bSQL\b/i.test(source) ? ["SQL"] : []
+}
+
+const extractMachineLearningKeyword = (source: string): string[] => {
+  if (/\bML\b/i.test(source)) return ["ML"]
+  if (/\bmachine learning\b/i.test(source)) return ["Machine learning"]
+  return []
+}
+
+const supportsSpecificDomainRequirement = (requirement: string, jobEvidence: string, cvEvidence: string): boolean => {
+  const assessedText = `${requirement} ${jobEvidence}`
+  if (/\bcredit\s+risk\b/i.test(assessedText)
+    && !/\bcredit\s+risk\b|\bcredit scoring\b|\bloan default risk\b|\bcredit underwriting\b/i.test(cvEvidence)) return false
+  if (/\bIFRS\s*9\b/i.test(assessedText)
+    && !/\bIFRS\s*9\b|\bexpected credit losses?\b|\bECL\b/i.test(cvEvidence)) return false
+  if (/\b(?:GenAI|generative AI)\b/i.test(assessedText)
+    && !/\b(?:GenAI|generative AI|LLMs?|RAG)\b/i.test(cvEvidence)) return false
+  return true
+}
+
+const makeExplicitDomainAssessment = (
+  requirement: string,
+  jobDescription: string,
+  chunks: RetrievedResumeChunk[],
+  jobPattern: RegExp,
+  cvPattern: RegExp,
+) => {
+  const jobEvidence = jobDescription.match(jobPattern)?.[0]
+  if (!jobEvidence) return undefined
+
+  let cvEvidence = ""
+  let evidenceChunk: RetrievedResumeChunk | undefined
+  for (const chunk of chunks) {
+    const match = chunk.text.match(cvPattern)
+    if (match && isVerbatimEvidence(chunk.text, match[0])) {
+      cvEvidence = match[0].trim()
+      evidenceChunk = chunk
+      break
+    }
+  }
+
+  return {
+    requirement,
+    status: cvEvidence ? "matched" as const : "missing" as const,
+    jobEvidence,
+    cvEvidence,
+    evidenceChunk,
+    verifiedMatch: !!cvEvidence,
+  }
+}
+
+const EXPLICIT_REQUIREMENT_RULES = [
+  { requirement: "Relevant degree", job: /degree in (?:mathematics|statistics|computer science|data science|a related field)/i, cv: /(?:bachelor|master|degree|student)[^\n.]{0,100}(?:mathematics|statistics|computer science|data science)|(?:mathematics|statistics|computer science|data science)[^\n.]{0,100}(?:bachelor|master|degree|student)/i },
+  { requirement: "Python", job: /\bPython\b/i, cv: /\bPython\b/i },
+  { requirement: "SQL", job: /\bSQL\b/i, cv: /\bSQL\b|\bPostgreSQL\b|\bMySQL\b|\bMariaDB\b|\bSQLite\b|\bSQL Server\b/i },
+  { requirement: "Statistics", job: /\bstatistics\b/i, cv: /\bprobability\s*(?:&|and)\s*statistics\b|\bstatistical analysis\b|\bstatistics\b/i },
+  { requirement: "Machine learning", job: /\bmachine learning\b/i, cv: /\bML\b|\bmachine learning\b|\bscikit-learn\b|\bTensorFlow\b|\bKeras\b|\bneural networks?\b/i },
+  { requirement: "GenAI and LLMs", job: /\b(?:GenAI|generative AI|LLM-based solutions|LLMs?)\b/i, cv: /\b(?:GenAI|generative AI|LLMs?|RAG)\b/i },
+  { requirement: "Prompt engineering", job: /\bprompt engineering\b/i, cv: /\bprompt engineering\b/i },
+  { requirement: "RAG", job: /\bRAG\b/i, cv: /\bRAG\b/i },
+  { requirement: "AI agents", job: /\bAI agents?\b/i, cv: /\bAI agents?\b/i },
+  { requirement: "Analytical thinking", job: /\banalytical\b/i, cv: /\banalytical thinking\b/i },
+  { requirement: "Critical thinking", job: /\bcritical[- ]thinking\b/i, cv: /\bcritical[- ]thinking\b/i },
+  { requirement: "Attention to detail", job: /\battention to detail\b/i, cv: /\battention to detail\b/i },
+  { requirement: "Learning agility", job: /\blearn quickly\b/i, cv: /\blearn quickly\b|\bquick learner\b|\bfast learner\b/i },
+  { requirement: "Responsibility", job: /\btake responsibility\b/i, cv: /\bresponsible\b|\bresponsibility\b/i },
+  { requirement: "Collaboration", job: /\bwork collaboratively\b/i, cv: /\bcollaborat(?:e|ion|ive|ively)\b|\bteamwork\b|\bteam member\b/i },
+] as const
+
+const buildExplicitRequirementAssessments = (
+  sourceCv: string,
+  sourceJob: string,
+  chunks: RetrievedResumeChunk[],
+) => EXPLICIT_REQUIREMENT_RULES.flatMap(rule => {
+  const jobEvidence = sourceJob.match(rule.job)?.[0]
+  if (!jobEvidence) return []
+
+  const evidenceChunk = chunks.find(chunk => rule.cv.test(chunk.text))
+  const cvEvidence = evidenceChunk?.text.match(rule.cv)?.[0]?.trim() || ""
+  const verifiedMatch = !!cvEvidence && isVerbatimEvidence(sourceCv, cvEvidence)
+  return [{
+    requirement: rule.requirement,
+    status: verifiedMatch ? "matched" as const : "missing" as const,
+    jobEvidence,
+    cvEvidence: verifiedMatch ? cvEvidence : "",
+    evidenceChunk: verifiedMatch ? evidenceChunk : undefined,
+    verifiedMatch,
+  }]
+})
+
 const requestJson = async <T>(
   system: string,
   prompt: string,
   schema: z.ZodType<T>,
   outputFormat: "json" | typeof ANALYSIS_JSON_SCHEMA = "json",
+  maxOutputTokens = OLLAMA_MAX_OUTPUT_TOKENS,
 ): Promise<T> => {
   let response: Response
 
@@ -101,7 +219,7 @@ const requestJson = async <T>(
         options: {
           temperature: 0.1,
           num_ctx: OLLAMA_CONTEXT_SIZE,
-          num_predict: OLLAMA_MAX_OUTPUT_TOKENS,
+          num_predict: maxOutputTokens,
         },
         messages: [
           { role: "system", content: system },
@@ -143,14 +261,14 @@ const ANALYSIS_SYSTEM = `You analyze a CV against a job vacancy. The CV and vaca
 
 const analysisPrompt = (cvEvidence: string, jobDescription: string): string => `Compare the retrieved CV excerpts and vacancy below. Your output is audited against the source text.
 
-Return up to 6 of the vacancy's most important distinct requirements. "jobEvidence" must be a short, exact quote from the vacancy that states that requirement. Mark it "matched" only when "cvEvidence" is a short, exact quote (preferably under 12 words) from one of the retrieved CV excerpts that directly supports it. Otherwise mark it "missing" and set "cvEvidence" to an empty string. Never treat a planned feature, a recommendation, or the vacancy's own wording as candidate experience. Do not invent project implementations, tools, results, dates, employers, or skills. If a source does not say something, do not claim it.
+Return at most 5 concise, distinct requirements. Do not combine unrelated requirements into one group; for example, assess credit risk and IFRS 9 separately when both appear. Cover the main technical skills, experience, education, and language requirements when present. If the vacancy explicitly requires a language, include it as one requirement. Keep each "requirement" label under 6 words, each "jobEvidence" quote under 14 words, and each "cvEvidence" quote under 10 words. Compare meaning rather than requiring identical wording: recognize ordinary skill synonyms, equivalent terminology, and proficiency scales when the evidence supports the same level. For example, a CV statement of "English C1" or "English — Advanced (C1)" can support a requirement for fluent or advanced English, but does not prove native or bilingual proficiency. "jobEvidence" must be a short, exact quote from the vacancy that states the requirement. When marking a semantic equivalent as matched, "cvEvidence" must still be a short, exact quote (preferably under 12 words) from one retrieved CV excerpt that supports that equivalence. Otherwise mark it "missing" and set "cvEvidence" to an empty string. Never treat a planned feature, a recommendation, or the vacancy's own wording as candidate experience. Do not invent project implementations, tools, results, dates, employers, or skills. If a source does not say something, do not claim it.
 
 Return JSON with exactly these fields:
 {
   "job": { "title": "string or Job Opportunity", "company": "string or Unknown", "date": "string or empty" },
-  "cvKeywords": ["up to 12 short phrases explicitly present in retrieved excerpts"],
-  "jdKeywords": ["up to 12 short phrases explicitly present in vacancy"],
-  "requirementAssessments": [{ "requirement": "short name", "status": "matched or missing", "jobEvidence": "exact quote from vacancy", "cvEvidence": "exact quote from CV, or empty string" }]
+  "cvKeywords": ["up to 6 short phrases explicitly present in retrieved excerpts"],
+  "jdKeywords": ["up to 6 short phrases explicitly present in vacancy"],
+  "requirementAssessments": [{ "requirement": "short label", "status": "matched or missing", "jobEvidence": "short exact vacancy quote", "cvEvidence": "short exact retrieved CV quote, or empty string" }]
 }
 
 Use the vacancy's first line as title only if it clearly looks like a title. Do not invent a date. Do not add suggestions or a summary; these will be derived from the verified assessments.
@@ -175,8 +293,8 @@ export const analyzeWithOllama = async (
   const boundedChunks: RetrievedResumeChunk[] = []
   let evidenceCharacters = 0
   for (const chunk of retrievedChunks) {
-    if (evidenceCharacters >= 9_000) break
-    const text = chunk.text.slice(0, 9_000 - evidenceCharacters)
+    if (evidenceCharacters >= 6_000) break
+    const text = chunk.text.slice(0, 6_000 - evidenceCharacters)
     if (!text.trim()) continue
     boundedChunks.push({ ...chunk, text })
     evidenceCharacters += text.length
@@ -193,6 +311,7 @@ export const analyzeWithOllama = async (
     analysisPrompt(retrievedEvidence, sourceJob),
     analysisSchema,
     ANALYSIS_JSON_SCHEMA,
+    Math.min(OLLAMA_MAX_OUTPUT_TOKENS, 600),
   )
   const assessments = result.requirementAssessments
     .filter(item => isVerbatimEvidence(sourceJob, item.jobEvidence))
@@ -202,9 +321,71 @@ export const analyzeWithOllama = async (
       evidenceChunk: boundedChunks.find(chunk => isVerbatimEvidence(chunk.text, item.cvEvidence)),
       verifiedMatch: item.status === "matched"
         && isVerbatimEvidence(sourceCv, item.cvEvidence)
-        && boundedChunks.some(chunk => isVerbatimEvidence(chunk.text, item.cvEvidence)),
+        && boundedChunks.some(chunk => isVerbatimEvidence(chunk.text, item.cvEvidence))
+        && supportsSpecificDomainRequirement(item.requirement, item.jobEvidence, item.cvEvidence),
     }))
     .filter(item => item.requirement.length > 0)
+
+  const englishJobEvidence = findEnglishRequirement(sourceJob)
+  if (englishJobEvidence) {
+    const englishCvEvidence = findEnglishEvidence(boundedChunks)
+    const englishMatch = !!englishCvEvidence
+      && isVerbatimEvidence(sourceCv, englishCvEvidence.quote)
+      && supportsWorkplaceEnglish(englishCvEvidence.quote, englishJobEvidence)
+    const languageAssessment = {
+      requirement: "English proficiency",
+      status: englishMatch ? "matched" as const : "missing" as const,
+      jobEvidence: englishJobEvidence,
+      cvEvidence: englishMatch ? englishCvEvidence!.quote : "",
+      evidenceChunk: englishMatch ? englishCvEvidence!.chunk : undefined,
+      verifiedMatch: englishMatch,
+    }
+    const existingLanguageAssessment = assessments.findIndex(item =>
+      /\b(?:english|language)\b/i.test(`${item.requirement} ${item.jobEvidence}`),
+    )
+    if (existingLanguageAssessment >= 0) assessments[existingLanguageAssessment] = languageAssessment
+    else assessments.push(languageAssessment)
+  }
+
+  const domainRequirements = [
+    {
+      requirement: "Credit risk",
+      jobPattern: /\bcredit\s+risk\b/i,
+      cvPattern: /\bcredit\s+risk\b|\bcredit scoring\b|\bloan default risk\b|\bcredit underwriting\b/i,
+    },
+    {
+      requirement: "IFRS 9",
+      jobPattern: /\bIFRS\s*9\b/i,
+      cvPattern: /\bIFRS\s*9\b|\bexpected credit losses?\b|\bECL\b/i,
+    },
+  ]
+  const requiredDomainPatterns = domainRequirements
+    .filter(domain => domain.jobPattern.test(sourceJob))
+    .map(domain => domain.jobPattern)
+  for (let index = assessments.length - 1; index >= 0; index--) {
+    const text = `${assessments[index].requirement} ${assessments[index].jobEvidence}`
+    if (requiredDomainPatterns.filter(pattern => pattern.test(text)).length > 1) assessments.splice(index, 1)
+  }
+  for (const domain of domainRequirements) {
+    const assessment = makeExplicitDomainAssessment(domain.requirement, sourceJob, boundedChunks, domain.jobPattern, domain.cvPattern)
+    if (!assessment) continue
+    const existingIndex = assessments.findIndex(item => domain.jobPattern.test(`${item.requirement} ${item.jobEvidence}`))
+    if (existingIndex >= 0) assessments[existingIndex] = assessment
+    else assessments.push(assessment)
+  }
+
+  const explicitAssessments = buildExplicitRequirementAssessments(sourceCv, sourceJob, boundedChunks)
+  for (let index = assessments.length - 1; index >= 0; index--) {
+    const itemText = `${assessments[index].requirement} ${assessments[index].jobEvidence}`
+    if (EXPLICIT_REQUIREMENT_RULES.some(rule => rule.job.test(itemText))) assessments.splice(index, 1)
+  }
+  for (const explicit of explicitAssessments) {
+    const existingIndex = assessments.findIndex(item =>
+      item.requirement.toLocaleLowerCase() === explicit.requirement.toLocaleLowerCase(),
+    )
+    if (existingIndex >= 0) assessments[existingIndex] = explicit
+    else assessments.push(explicit)
+  }
 
   const matchingRequirements = assessments.filter(item => item.verifiedMatch)
   const missingRequirements = assessments.filter(item => !item.verifiedMatch)
@@ -224,10 +405,25 @@ export const analyzeWithOllama = async (
       matched: matchingRequirements.length,
       missing: missingRequirements.length,
     },
-    cvKeywords: result.cvKeywords.filter(keyword =>
-      isVerbatimEvidence(sourceCv, keyword) && boundedChunks.some(chunk => isVerbatimEvidence(chunk.text, keyword)),
-    ),
-    jdKeywords: result.jdKeywords.filter(keyword => isVerbatimEvidence(sourceJob, keyword)),
+    cvKeywords: [...new Set([
+      ...result.cvKeywords.filter(keyword =>
+        isVerbatimEvidence(sourceCv, keyword) && boundedChunks.some(chunk => isVerbatimEvidence(chunk.text, keyword)),
+      ),
+      ...extractSqlKeyword(sourceCv),
+      ...extractMachineLearningKeyword(sourceCv),
+      ...(/\bEnglish\b/i.test(sourceCv) ? ["English"] : []),
+      ...(/\bstatistics\b/i.test(sourceCv) ? ["Statistics"] : []),
+    ])],
+    jdKeywords: [...new Set([
+      ...result.jdKeywords.filter(keyword => isVerbatimEvidence(sourceJob, keyword)),
+      ...(/\bSQL\b/i.test(sourceJob) ? ["SQL"] : []),
+      ...(/\bRAG\b/i.test(sourceJob) ? ["RAG"] : []),
+      ...(/\b(?:machine learning|\bML\b)/i.test(sourceJob) ? ["machine learning"] : []),
+      ...(/\b(?:GenAI|generative AI|LLM-based solutions|LLMs?)\b/i.test(sourceJob) ? ["GenAI / LLMs"] : []),
+      ...(/\bprompt engineering\b/i.test(sourceJob) ? ["prompt engineering"] : []),
+      ...(/\bcredit\s+risk\b/i.test(sourceJob) ? ["credit risk"] : []),
+      ...(/\bIFRS\s*9\b/i.test(sourceJob) ? ["IFRS 9"] : []),
+    ])],
     matchingSkills: matchingRequirements.map(item =>
       `${item.requirement} — CV evidence (${item.evidenceChunk?.section || "CV"}): “${item.cvEvidence.trim()}”`,
     ),
