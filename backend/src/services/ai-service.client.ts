@@ -1,6 +1,24 @@
 import { z } from "zod"
-import type { GeminiAnalysisResult } from "./gemini.service.js"
-import { AiServiceError } from "./ollama.service.js"
+
+/**
+ * Client for the Python AI service (backend/ai-service).
+ * Every LLM and embedding call in the application goes through this one service.
+ */
+
+export class AiServiceError extends Error {
+  constructor(message: string, public readonly statusCode: number, public readonly code: string) {
+    super(message)
+    this.name = "AiServiceError"
+  }
+}
+
+const suggestionSchema = z.object({
+  type: z.enum(["improvement", "warning", "positive"]),
+  title: z.string(),
+  description: z.string(),
+  actionLabel: z.string(),
+  actionUrl: z.string(),
+})
 
 const analysisResultSchema = z.object({
   job: z.object({ title: z.string(), company: z.string(), date: z.string() }),
@@ -10,149 +28,124 @@ const analysisResultSchema = z.object({
   jdKeywords: z.array(z.string()),
   matchingSkills: z.array(z.string()),
   missingRequirements: z.array(z.string()),
-  suggestions: z.array(z.object({
-    type: z.enum(["improvement", "warning", "positive"]),
-    title: z.string(),
-    description: z.string(),
-    actionLabel: z.string(),
-    actionUrl: z.string(),
-  })),
+  suggestions: z.array(suggestionSchema),
   summary: z.string(),
 })
 
-const ragIndexResultSchema = z.object({
-  indexed_chunks: z.number().int().nonnegative(),
+const profileResultSchema = z.object({
+  fullName: z.string(),
+  keywords: z.array(z.string()),
+  multilingualSkills: z.array(z.object({ en: z.string(), az: z.string(), ru: z.string() })),
+  summary: z.string(),
+  parsedText: z.string(),
+})
+
+const indexJobsResultSchema = z.object({
+  embedded: z.number().int().nonnegative(),
+  unchanged: z.number().int().nonnegative(),
   embedding_model: z.string(),
 })
 
-const ragSearchResultSchema = z.object({
-  results: z.record(z.string(), z.array(z.object({
-    chunk_id: z.number().int(),
-    section: z.string(),
-    text: z.string(),
-    similarity: z.number().min(-1).max(1),
-  }))),
+const searchJobsResultSchema = z.object({
+  results: z.array(z.object({
+    job_id: z.string(),
+    similarity: z.number(),
+    duplicate_job_ids: z.array(z.string()),
+  })),
+  top_k: z.number().int(),
+  candidates_considered: z.number().int(),
+  duplicates_collapsed: z.number().int(),
 })
 
-export interface RetrievedResumeChunk {
-  chunkId: number
-  section: string
-  text: string
-  similarity: number
+export type AnalysisResult = z.infer<typeof analysisResultSchema>
+export type CvProfileResult = z.infer<typeof profileResultSchema>
+export type MultilingualSkill = CvProfileResult["multilingualSkills"][number]
+
+export interface JobDocument {
+  job_id: string
+  title: string
+  company: string
+  location: string
+  description: string
 }
 
-export const analyzeWithAiService = async (cvText: string, jobDescription: string): Promise<GeminiAnalysisResult> => {
+export interface JobHit {
+  jobId: string
+  similarity: number
+  duplicateJobIds: string[]
+}
+
+const post = async <T>(path: string, body: unknown, schema: z.ZodType<T>): Promise<T> => {
   const baseUrl = (process.env.AI_SERVICE_URL || "http://127.0.0.1:8000").replace(/\/$/, "")
+  const serviceKey = process.env.AI_SERVICE_KEY
   let response: Response
 
   try {
-    response = await fetch(`${baseUrl}/analyze`, {
+    response = await fetch(`${baseUrl}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(serviceKey ? { "X-AI-Service-Key": serviceKey } : {}),
+      },
       signal: AbortSignal.timeout(Number(process.env.AI_SERVICE_TIMEOUT_MS || 120_000)),
-      body: JSON.stringify({ cv_text: cvText, job_description: jobDescription }),
+      body: JSON.stringify(body),
     })
   } catch (error) {
     const detail = error instanceof Error && error.name === "TimeoutError"
       ? "The AI service did not respond in time."
-      : "Cannot connect to the AI service. Make sure its Docker container is running."
-    throw new AiServiceError(detail, 503, "AI_PROVIDER_UNAVAILABLE")
+      : "Cannot connect to the AI service. Make sure it is running."
+    throw new AiServiceError(detail, 503, "AI_SERVICE_UNAVAILABLE")
   }
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as { detail?: string }
-    const statusCode = response.status === 429 ? 429 : response.status >= 500 ? 503 : 502
-    throw new AiServiceError(body.detail || `AI service returned HTTP ${response.status}.`, statusCode, "AI_PROVIDER_ERROR")
+    const payload = await response.json().catch(() => ({})) as { detail?: unknown; code?: string }
+    const detail = typeof payload.detail === "string" ? payload.detail : `AI service returned HTTP ${response.status}.`
+    // Keep the statuses the user can act on; everything else is an upstream failure.
+    const statusCode = [422, 429].includes(response.status) ? response.status : response.status >= 500 ? 503 : 502
+    throw new AiServiceError(detail, statusCode, `AI_${(payload.code || "error").toUpperCase()}`)
   }
 
-  const parsed = analysisResultSchema.safeParse(await response.json())
+  const parsed = schema.safeParse(await response.json())
   if (!parsed.success) {
-    throw new AiServiceError("The AI service returned an invalid analysis format.", 502, "AI_INVALID_RESPONSE")
+    throw new AiServiceError("The AI service returned an unexpected response format.", 502, "AI_INVALID_RESPONSE")
   }
   return parsed.data
 }
 
-export const indexResumeWithAiService = async (
-  userId: string,
-  cvText: string,
-): Promise<{ indexedChunks: number; embeddingModel: string }> => {
-  const baseUrl = (process.env.AI_SERVICE_URL || "http://127.0.0.1:8000").replace(/\/$/, "")
-  let response: Response
-  try {
-    response = await fetch(`${baseUrl}/rag/index`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(Number(process.env.AI_SERVICE_TIMEOUT_MS || 120_000)),
-      body: JSON.stringify({ user_id: userId, cv_text: cvText }),
-    })
-  } catch {
-    throw new AiServiceError("Cannot connect to the AI service for CV indexing.", 503, "AI_RAG_UNAVAILABLE")
-  }
+/** Compare a CV with a job description: requirement checklist, evidence quotes and score. */
+export const analyzeWithAiService = (cvText: string, jobDescription: string): Promise<AnalysisResult> =>
+  post("/analyze", { cv_text: cvText.slice(0, 30_000), job_description: jobDescription.slice(0, 30_000) }, analysisResultSchema)
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as { detail?: string }
-    throw new AiServiceError(body.detail || `AI service returned HTTP ${response.status}.`, 503, "AI_RAG_INDEX_FAILED")
-  }
+/** Extract the candidate profile (skills in EN/AZ/RU and a summary) from CV text. */
+export const extractProfileWithAiService = (cvText: string): Promise<CvProfileResult> =>
+  post("/profile", { cv_text: cvText.slice(0, 30_000) }, profileResultSchema)
 
-  const parsed = ragIndexResultSchema.safeParse(await response.json())
-  if (!parsed.success) {
-    throw new AiServiceError("The AI service returned an invalid indexing response.", 502, "AI_INVALID_RESPONSE")
+/** Add or update job postings in the vector index. Unchanged postings are not re-embedded. */
+export const indexJobsWithAiService = async (jobs: JobDocument[]): Promise<{ embedded: number; unchanged: number }> => {
+  let embedded = 0
+  let unchanged = 0
+  for (let start = 0; start < jobs.length; start += 200) {
+    const result = await post("/jobs/index", { jobs: jobs.slice(start, start + 200) }, indexJobsResultSchema)
+    embedded += result.embedded
+    unchanged += result.unchanged
   }
-  return {
-    indexedChunks: parsed.data.indexed_chunks,
-    embeddingModel: parsed.data.embedding_model,
-  }
+  return { embedded, unchanged }
 }
 
-export const retrieveResumeChunks = async (
-  userId: string,
-  requirements: string[],
-  topK = 2,
-): Promise<RetrievedResumeChunk[]> => {
-  const baseUrl = (process.env.AI_SERVICE_URL || "http://127.0.0.1:8000").replace(/\/$/, "")
-  let response: Response
-
-  try {
-    response = await fetch(`${baseUrl}/rag/search`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(Number(process.env.AI_SERVICE_TIMEOUT_MS || 120_000)),
-      body: JSON.stringify({ user_id: userId, requirements, top_k: topK }),
-    })
-  } catch (error) {
-    const detail = error instanceof Error && error.name === "TimeoutError"
-      ? "The AI service did not respond in time while retrieving CV evidence."
-      : "Cannot connect to the AI service for CV evidence retrieval."
-    throw new AiServiceError(detail, 503, "AI_RAG_UNAVAILABLE")
-  }
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as { detail?: string }
-    throw new AiServiceError(body.detail || `AI service returned HTTP ${response.status} during CV retrieval.`, 503, "AI_RAG_SEARCH_FAILED")
-  }
-
-  const parsed = ragSearchResultSchema.safeParse(await response.json())
-  if (!parsed.success) {
-    throw new AiServiceError("The AI service returned an invalid CV retrieval response.", 502, "AI_INVALID_RESPONSE")
-  }
-
-  const uniqueChunks = new Map<number, RetrievedResumeChunk>()
-  for (const chunks of Object.values(parsed.data.results)) {
-    for (const chunk of chunks) {
-      const existing = uniqueChunks.get(chunk.chunk_id)
-      if (!existing || chunk.similarity > existing.similarity) {
-        uniqueChunks.set(chunk.chunk_id, {
-          chunkId: chunk.chunk_id,
-          section: chunk.section,
-          text: chunk.text,
-          similarity: chunk.similarity,
-        })
-      }
-    }
-  }
-
-  return [...uniqueChunks.values()]
-    .filter(chunk => chunk.similarity >= 0.2)
-    .sort((left, right) => right.similarity - left.similarity)
-    .slice(0, 8)
+/** Retrieve the jobs most similar to a CV profile, with re-posted duplicates collapsed. */
+export const searchJobsWithAiService = async (
+  queryText: string,
+  options: { topK?: number; minSimilarity?: number; jobIds?: string[] } = {},
+): Promise<JobHit[]> => {
+  const result = await post("/jobs/search", {
+    query_text: queryText.slice(0, 30_000),
+    top_k: options.topK,
+    min_similarity: options.minSimilarity,
+    job_ids: options.jobIds,
+  }, searchJobsResultSchema)
+  return result.results.map(hit => ({
+    jobId: hit.job_id,
+    similarity: hit.similarity,
+    duplicateJobIds: hit.duplicate_job_ids,
+  }))
 }

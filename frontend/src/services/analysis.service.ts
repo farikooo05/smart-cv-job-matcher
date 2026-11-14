@@ -58,6 +58,7 @@ export interface DashboardStats {
   }
 }
 
+// "ollama" remains only so analyses saved before the provider was removed still display.
 export type AnalysisAiProvider = "ollama" | "gemini"
 
 export interface JobMatch {
@@ -82,11 +83,10 @@ export interface MatchesResponse {
 }
 
 export const analysisService = {
-  create: async (file: File, jobDescription: string, aiProvider: AnalysisAiProvider): Promise<{ analysis: AnalysisResult }> => {
+  create: async (file: File, jobDescription: string): Promise<{ analysis: AnalysisResult }> => {
     const formData = new FormData()
     formData.append("cv", file)
     formData.append("jobDescription", jobDescription)
-    formData.append("aiProvider", aiProvider)
 
     return api<{ analysis: AnalysisResult }>("/api/analysis", {
       method: "POST",

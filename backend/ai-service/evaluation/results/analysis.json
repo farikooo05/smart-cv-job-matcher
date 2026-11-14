@@ -1,0 +1,718 @@
+{
+  "suite": "analysis",
+  "run_at": "2026-11-14T12:07:11+00:00",
+  "model": "gemini-3.5-flash-lite",
+  "model_versions": [
+    "gemini-3.5-flash-lite"
+  ],
+  "generation_config": {
+    "temperature": 0.0
+  },
+  "prompt_versions": [
+    "assessment-v1",
+    "requirements-v1"
+  ],
+  "cases": 26,
+  "labelled_requirements": 185,
+  "assessment": {
+    "decisions": 185,
+    "accuracy": 0.9784,
+    "precision": 0.9776,
+    "recall": 0.9924,
+    "f1": 0.985,
+    "confusion": {
+      "tp": 131,
+      "fp": 3,
+      "fn": 1,
+      "tn": 50
+    },
+    "model_claimed_matches": 134,
+    "unverified_quotes": 0,
+    "quote_validity": 1.0,
+    "unassessed_requirements": 0
+  },
+  "extraction": {
+    "golden_requirements_found": 183,
+    "coverage": 0.9892,
+    "importance_agreement": 1.0,
+    "mean_extracted_per_vacancy": 7.76,
+    "extra_requirements": 8,
+    "vacancy_quote_validity": 0.9949,
+    "empty_vacancies_handled": "1/1"
+  },
+  "end_to_end": {
+    "decisions": 185,
+    "accuracy": 0.973,
+    "precision": 0.9774,
+    "recall": 0.9848,
+    "f1": 0.9811,
+    "confusion": {
+      "tp": 130,
+      "fp": 3,
+      "fn": 2,
+      "tn": 50
+    },
+    "score_mean_absolute_error": 2.64,
+    "scores": {
+      "real-ai-intern-en": {
+        "golden": 85,
+        "predicted": 83
+      },
+      "real-ai-intern-az": {
+        "golden": 85,
+        "predicted": 96
+      },
+      "backend-junior-direct": {
+        "golden": 88,
+        "predicted": 88
+      },
+      "data-analyst-equivalents": {
+        "golden": 92,
+        "predicted": 92
+      },
+      "ml-intern-wishes-and-negations": {
+        "golden": 33,
+        "predicted": 33
+      },
+      "senior-java-levels-not-met": {
+        "golden": 33,
+        "predicted": 33
+      },
+      "senior-frontend-levels-met": {
+        "golden": 92,
+        "predicted": 92
+      },
+      "devops-products-imply-categories": {
+        "golden": 78,
+        "predicted": 89
+      },
+      "qa-certificate-missing": {
+        "golden": 85,
+        "predicted": 69
+      },
+      "accountant": {
+        "golden": 85,
+        "predicted": 85
+      },
+      "digital-marketing": {
+        "golden": 71,
+        "predicted": 83
+      },
+      "b2b-sales-crm": {
+        "golden": 85,
+        "predicted": 83
+      },
+      "barista-vs-developer-cv": {
+        "golden": 20,
+        "predicted": 18
+      },
+      "support-language-levels": {
+        "golden": 67,
+        "predicted": 71
+      },
+      "english-teacher": {
+        "golden": 83,
+        "predicted": 83
+      },
+      "civil-engineer": {
+        "golden": 67,
+        "predicted": 67
+      },
+      "python-developer-ru": {
+        "golden": 79,
+        "predicted": 79
+      },
+      "sales-manager-az": {
+        "golden": 77,
+        "predicted": 77
+      },
+      "financial-analyst-en-job-ru-cv": {
+        "golden": 83,
+        "predicted": 83
+      },
+      "office-admin-en-job-az-cv": {
+        "golden": 83,
+        "predicted": 89
+      },
+      "injection-in-cv": {
+        "golden": 17,
+        "predicted": 17
+      },
+      "injection-in-vacancy": {
+        "golden": 60,
+        "predicted": 60
+      },
+      "contact-details-in-cv": {
+        "golden": 80,
+        "predicted": 80
+      },
+      "product-manager-many-nice-to-haves": {
+        "golden": 80,
+        "predicted": 80
+      },
+      "it-helpdesk-student": {
+        "golden": 67,
+        "predicted": 67
+      }
+    }
+  },
+  "assessment_by_tag": {
+    "az": {
+      "decisions": 30,
+      "accuracy": 0.9667,
+      "precision": 0.96,
+      "recall": 1.0,
+      "f1": 0.9796,
+      "confusion": {
+        "tp": 24,
+        "fp": 1,
+        "fn": 0,
+        "tn": 5
+      }
+    },
+    "cross-lingual": {
+      "decisions": 29,
+      "accuracy": 0.9655,
+      "precision": 0.96,
+      "recall": 1.0,
+      "f1": 0.9796,
+      "confusion": {
+        "tp": 24,
+        "fp": 1,
+        "fn": 0,
+        "tn": 4
+      }
+    },
+    "en": {
+      "decisions": 141,
+      "accuracy": 0.9787,
+      "precision": 0.9796,
+      "recall": 0.9897,
+      "f1": 0.9846,
+      "confusion": {
+        "tp": 96,
+        "fp": 2,
+        "fn": 1,
+        "tn": 42
+      }
+    },
+    "equivalents": {
+      "decisions": 23,
+      "accuracy": 0.9565,
+      "precision": 0.95,
+      "recall": 1.0,
+      "f1": 0.9744,
+      "confusion": {
+        "tp": 19,
+        "fp": 1,
+        "fn": 0,
+        "tn": 3
+      }
+    },
+    "importance": {
+      "decisions": 7,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2
+      }
+    },
+    "injection": {
+      "decisions": 11,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "tn": 7
+      }
+    },
+    "levels": {
+      "decisions": 19,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 12,
+        "fp": 0,
+        "fn": 0,
+        "tn": 7
+      }
+    },
+    "mismatch": {
+      "decisions": 5,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 4
+      }
+    },
+    "negation": {
+      "decisions": 6,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 4
+      }
+    },
+    "non-tech": {
+      "decisions": 74,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 53,
+        "fp": 0,
+        "fn": 0,
+        "tn": 21
+      }
+    },
+    "pii": {
+      "decisions": 5,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1
+      }
+    },
+    "real": {
+      "decisions": 34,
+      "accuracy": 0.9412,
+      "precision": 0.9333,
+      "recall": 1.0,
+      "f1": 0.9655,
+      "confusion": {
+        "tp": 28,
+        "fp": 2,
+        "fn": 0,
+        "tn": 4
+      }
+    },
+    "ru": {
+      "decisions": 14,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 11,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3
+      }
+    },
+    "split:dev": {
+      "decisions": 75,
+      "accuracy": 0.9733,
+      "precision": 0.9623,
+      "recall": 1.0,
+      "f1": 0.9808,
+      "confusion": {
+        "tp": 51,
+        "fp": 2,
+        "fn": 0,
+        "tn": 22
+      }
+    },
+    "split:test": {
+      "decisions": 110,
+      "accuracy": 0.9818,
+      "precision": 0.9877,
+      "recall": 0.9877,
+      "f1": 0.9877,
+      "confusion": {
+        "tp": 80,
+        "fp": 1,
+        "fn": 1,
+        "tn": 28
+      }
+    },
+    "synthetic": {
+      "decisions": 151,
+      "accuracy": 0.9868,
+      "precision": 0.9904,
+      "recall": 0.9904,
+      "f1": 0.9904,
+      "confusion": {
+        "tp": 103,
+        "fp": 1,
+        "fn": 1,
+        "tn": 46
+      }
+    },
+    "tech": {
+      "decisions": 111,
+      "accuracy": 0.964,
+      "precision": 0.963,
+      "recall": 0.9873,
+      "f1": 0.975,
+      "confusion": {
+        "tp": 78,
+        "fp": 3,
+        "fn": 1,
+        "tn": 29
+      }
+    }
+  },
+  "end_to_end_by_tag": {
+    "az": {
+      "decisions": 30,
+      "accuracy": 0.9333,
+      "precision": 0.9583,
+      "recall": 0.9583,
+      "f1": 0.9583,
+      "confusion": {
+        "tp": 23,
+        "fp": 1,
+        "fn": 1,
+        "tn": 5
+      }
+    },
+    "cross-lingual": {
+      "decisions": 29,
+      "accuracy": 0.931,
+      "precision": 0.9583,
+      "recall": 0.9583,
+      "f1": 0.9583,
+      "confusion": {
+        "tp": 23,
+        "fp": 1,
+        "fn": 1,
+        "tn": 4
+      }
+    },
+    "en": {
+      "decisions": 141,
+      "accuracy": 0.9787,
+      "precision": 0.9796,
+      "recall": 0.9897,
+      "f1": 0.9846,
+      "confusion": {
+        "tp": 96,
+        "fp": 2,
+        "fn": 1,
+        "tn": 42
+      }
+    },
+    "equivalents": {
+      "decisions": 23,
+      "accuracy": 0.9565,
+      "precision": 0.95,
+      "recall": 1.0,
+      "f1": 0.9744,
+      "confusion": {
+        "tp": 19,
+        "fp": 1,
+        "fn": 0,
+        "tn": 3
+      }
+    },
+    "importance": {
+      "decisions": 7,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2
+      }
+    },
+    "injection": {
+      "decisions": 11,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "tn": 7
+      }
+    },
+    "levels": {
+      "decisions": 19,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 12,
+        "fp": 0,
+        "fn": 0,
+        "tn": 7
+      }
+    },
+    "mismatch": {
+      "decisions": 5,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0,
+        "tn": 4
+      }
+    },
+    "negation": {
+      "decisions": 6,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "tn": 4
+      }
+    },
+    "non-tech": {
+      "decisions": 74,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 53,
+        "fp": 0,
+        "fn": 0,
+        "tn": 21
+      }
+    },
+    "pii": {
+      "decisions": 5,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "tn": 1
+      }
+    },
+    "real": {
+      "decisions": 34,
+      "accuracy": 0.9118,
+      "precision": 0.931,
+      "recall": 0.9643,
+      "f1": 0.9474,
+      "confusion": {
+        "tp": 27,
+        "fp": 2,
+        "fn": 1,
+        "tn": 4
+      }
+    },
+    "ru": {
+      "decisions": 14,
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 11,
+        "fp": 0,
+        "fn": 0,
+        "tn": 3
+      }
+    },
+    "split:dev": {
+      "decisions": 75,
+      "accuracy": 0.96,
+      "precision": 0.9615,
+      "recall": 0.9804,
+      "f1": 0.9709,
+      "confusion": {
+        "tp": 50,
+        "fp": 2,
+        "fn": 1,
+        "tn": 22
+      }
+    },
+    "split:test": {
+      "decisions": 110,
+      "accuracy": 0.9818,
+      "precision": 0.9877,
+      "recall": 0.9877,
+      "f1": 0.9877,
+      "confusion": {
+        "tp": 80,
+        "fp": 1,
+        "fn": 1,
+        "tn": 28
+      }
+    },
+    "synthetic": {
+      "decisions": 151,
+      "accuracy": 0.9868,
+      "precision": 0.9904,
+      "recall": 0.9904,
+      "f1": 0.9904,
+      "confusion": {
+        "tp": 103,
+        "fp": 1,
+        "fn": 1,
+        "tn": 46
+      }
+    },
+    "tech": {
+      "decisions": 111,
+      "accuracy": 0.955,
+      "precision": 0.9625,
+      "recall": 0.9747,
+      "f1": 0.9686,
+      "confusion": {
+        "tp": 77,
+        "fp": 3,
+        "fn": 2,
+        "tn": 29
+      }
+    }
+  },
+  "guardrails": {
+    "cases_with_injection_flag": [
+      "injection-in-cv",
+      "injection-in-vacancy"
+    ],
+    "contact_details_redacted": 2
+  },
+  "calls": {
+    "assessment": {
+      "live_calls": 31,
+      "cached_calls": 19,
+      "failed_calls": 0,
+      "retries": 14,
+      "mean_latency_s": 3.66,
+      "p95_latency_s": 8.0,
+      "mean_prompt_tokens": 1130,
+      "mean_output_tokens": 386
+    },
+    "requirements": {
+      "live_calls": 18,
+      "cached_calls": 8,
+      "failed_calls": 0,
+      "retries": 2,
+      "mean_latency_s": 5.33,
+      "p95_latency_s": 32.24,
+      "mean_prompt_tokens": 855,
+      "mean_output_tokens": 314
+    }
+  },
+  "disagreements": [
+    {
+      "case": "real-ai-intern-en",
+      "requirement": "Critical thinking",
+      "expected": "missing",
+      "assessment": "matched",
+      "end_to_end": "matched",
+      "extracted_as": [
+        "Analytical and critical thinking"
+      ],
+      "evidence": "Analytical thinking and attention to detail",
+      "advice": ""
+    },
+    {
+      "case": "real-ai-intern-az",
+      "requirement": "AI agentləri",
+      "expected": "missing",
+      "assessment": "missing",
+      "end_to_end": "matched",
+      "extracted_as": [
+        "AI agentləri"
+      ],
+      "evidence": "",
+      "advice": "You mention LLM and RAG solutions, but you should explicitly state any experience with AI agents to cover this requirement."
+    },
+    {
+      "case": "real-ai-intern-az",
+      "requirement": "Analitik düşüncə",
+      "expected": "matched",
+      "assessment": "matched",
+      "end_to_end": "missing",
+      "extracted_as": [],
+      "evidence": "Analytical thinking",
+      "advice": ""
+    },
+    {
+      "case": "real-ai-intern-az",
+      "requirement": "Tənqidi düşüncə",
+      "expected": "missing",
+      "assessment": "matched",
+      "end_to_end": "missing",
+      "extracted_as": [],
+      "evidence": "Analytical thinking and attention to detail",
+      "advice": ""
+    },
+    {
+      "case": "devops-products-imply-categories",
+      "requirement": "Prometheus",
+      "expected": "missing",
+      "assessment": "matched",
+      "end_to_end": "matched",
+      "extracted_as": [
+        "Prometheus"
+      ],
+      "evidence": "set up Grafana dashboards",
+      "advice": ""
+    },
+    {
+      "case": "qa-certificate-missing",
+      "requirement": "2+ years of experience in manual testing",
+      "expected": "matched",
+      "assessment": "missing",
+      "end_to_end": "missing",
+      "extracted_as": [
+        "2+ years of experience in manual testing"
+      ],
+      "evidence": "",
+      "advice": "You have some experience since February 2024, but state exact dates or total duration to clearly show over 2 years of manual testing."
+    }
+  ],
+  "extra_requirements_by_case": {
+    "digital-marketing": [
+      "Instagram",
+      "Facebook",
+      "TikTok",
+      "Azerbaijani",
+      "Russian"
+    ],
+    "office-admin-en-job-az-cv": [
+      "Word",
+      "Excel",
+      "Outlook"
+    ]
+  }
+}

@@ -1,7 +1,6 @@
 import type { Request, Response } from "express"
 import prisma from "../lib/prisma.js"
-import { extractCvProfile } from "../services/ai-provider.service.js"
-import { indexResumeWithAiService } from "../services/ai-service.client.js"
+import { extractCvProfile } from "../services/ai.service.js"
 import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -64,7 +63,7 @@ export const updateMasterCv = async (req: Request, res: Response): Promise<void>
     }
 
     console.log(`[Profile] Extracting Master CV profile for User: ${userId}`)
-    const profile = await extractCvProfile(file.buffer, file.mimetype)
+    const profile = await extractCvProfile(file.buffer)
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -77,16 +76,6 @@ export const updateMasterCv = async (req: Request, res: Response): Promise<void>
         cvUpdatedAt: new Date(),
       }
     })
-
-    let ragIndexed = false
-    let ragIndexMessage = ""
-    try {
-      const indexResult = await indexResumeWithAiService(userId, profile.parsedText.slice(0, 30_000))
-      ragIndexed = indexResult.indexedChunks > 0
-    } catch (indexError) {
-      ragIndexMessage = indexError instanceof Error ? indexError.message : "Semantic CV indexing is not available."
-      console.warn(`[RAG] CV saved but semantic indexing failed for user ${userId}: ${ragIndexMessage}`)
-    }
 
     if (process.env.RESEND_API_KEY) {
       await resend.emails.send({
@@ -104,11 +93,7 @@ export const updateMasterCv = async (req: Request, res: Response): Promise<void>
     }
 
     res.json({
-      message: ragIndexed
-        ? "Master CV updated and semantic search index created."
-        : "Master CV profile updated, but semantic search indexing is not ready.",
-      ragIndexed,
-      ragIndexMessage,
+      message: "Master CV profile updated.",
       profile: {
         keywords: profile.keywords,
         summary: profile.summary,

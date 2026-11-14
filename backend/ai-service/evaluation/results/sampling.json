@@ -1,0 +1,94 @@
+{
+  "suite": "sampling",
+  "run_at": "2026-11-14T12:11:34+00:00",
+  "repeats": 3,
+  "cases": 12,
+  "configs": [
+    {
+      "name": "temperature 0",
+      "generation_config": {
+        "temperature": 0.0
+      },
+      "accuracy_mean": 0.9751,
+      "accuracy_min": 0.972,
+      "accuracy_max": 0.9813,
+      "verdict_stability": 0.972,
+      "decisions_per_run": 107,
+      "calls": {
+        "live_calls": 36,
+        "cached_calls": 0,
+        "failed_calls": 0,
+        "retries": 2,
+        "mean_latency_s": 2.76,
+        "p95_latency_s": 2.71,
+        "mean_prompt_tokens": 1330,
+        "mean_output_tokens": 483
+      }
+    },
+    {
+      "name": "temperature 1",
+      "generation_config": {
+        "temperature": 1.0
+      },
+      "accuracy_mean": 0.9689,
+      "accuracy_min": 0.9626,
+      "accuracy_max": 0.972,
+      "verdict_stability": 0.9907,
+      "decisions_per_run": 107,
+      "calls": {
+        "live_calls": 36,
+        "cached_calls": 0,
+        "failed_calls": 0,
+        "retries": 8,
+        "mean_latency_s": 5.13,
+        "p95_latency_s": 31.17,
+        "mean_prompt_tokens": 1330,
+        "mean_output_tokens": 479
+      }
+    },
+    {
+      "name": "temperature 1, top_k 1",
+      "generation_config": {
+        "temperature": 1.0,
+        "topK": 1
+      },
+      "accuracy_mean": 0.9751,
+      "accuracy_min": 0.972,
+      "accuracy_max": 0.9813,
+      "verdict_stability": 0.9907,
+      "decisions_per_run": 107,
+      "calls": {
+        "live_calls": 36,
+        "cached_calls": 0,
+        "failed_calls": 0,
+        "retries": 7,
+        "mean_latency_s": 4.66,
+        "p95_latency_s": 30.46,
+        "mean_prompt_tokens": 1330,
+        "mean_output_tokens": 484
+      }
+    },
+    {
+      "name": "temperature 2",
+      "generation_config": {
+        "temperature": 2.0
+      },
+      "accuracy_mean": 0.9751,
+      "accuracy_min": 0.972,
+      "accuracy_max": 0.9813,
+      "verdict_stability": 0.9907,
+      "decisions_per_run": 107,
+      "calls": {
+        "live_calls": 36,
+        "cached_calls": 0,
+        "failed_calls": 0,
+        "retries": 8,
+        "mean_latency_s": 4.92,
+        "p95_latency_s": 32.1,
+        "mean_prompt_tokens": 1330,
+        "mean_output_tokens": 476
+      }
+    }
+  ],
+  "model": "gemini-3.5-flash-lite"
+}
