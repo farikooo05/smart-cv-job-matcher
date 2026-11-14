@@ -1,6 +1,6 @@
 import type { Request, Response } from "express"
 import prisma from "../lib/prisma.js"
-import { analyzeCv, getAiProvider } from "../services/ai-provider.service.js"
+import { AI_PROVIDER, analyzeCv } from "../services/ai.service.js"
 import { runFullScrape } from "../services/scraper.service.js"
 import { runMatchingCycle } from "../services/matching.service.js"
 
@@ -9,7 +9,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
   
   try {
     const userId = req.userId as string
-    const { jobDescription, aiProvider } = req.body
+    const { jobDescription } = req.body
     const file = req.file
 
     if (!file) {
@@ -27,8 +27,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
     }
 
     console.log(`[Analysis] Calling AI service...`)
-    const provider = getAiProvider(aiProvider)
-    const result = await analyzeCv(file.buffer, file.mimetype, jobDescription, provider, userId)
+    const result = await analyzeCv(file.buffer, jobDescription)
     const isAiAnalysis = true
     console.log(`[Analysis] AI provider returned success. Scoring: ${result.compatibilityScore}`)
 
@@ -50,7 +49,7 @@ export const createAnalysis = async (req: Request, res: Response): Promise<void>
         suggestions: JSON.stringify(result.suggestions),
         summary: result.summary,
         isAiAnalysis,
-        aiProvider: provider,
+        aiProvider: AI_PROVIDER,
       },
     })
     console.log(`[Analysis] Database record created: ${analysis.id}`)

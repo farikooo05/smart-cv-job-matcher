@@ -1,0 +1,33 @@
+About the vacancy
+This intern role involves taking part in the validation of credit risk, IFRS 9, Machine Learning and Gen AI models, as well as preparing data and checking its quality. Candidates are expected to know the basics of Python, SQL, statistics and machine learning, and to understand Gen AI, LLMs, RAG and AI agents.
+
+Requirements
+Higher education in mathematics, statistics, computer science, data science or a similar field (final-year student, graduate or master's student)
+Knowledge of Python and SQL, and the basics of statistics and machine learning
+Understanding of Gen AI and LLM-based solutions (prompt writing, RAG, AI agents); practical experience is an advantage
+English: at a level sufficient to read technical literature and prepare documents
+Analytical and critical thinking, attention to detail
+Ability to learn quickly, a sense of responsibility and the ability to work in a team
+
+Responsibilities
+Support validators in the independent validation of models (credit risk, IFRS 9, ML and Gen AI models);
+Prepare data for validation, check its quality and carry out initial analysis;
+Run validation tests (discriminatory power, calibration, stability, backtesting) using Python and SQL;
+Take part in testing AI/Gen AI models and AI agents (answer correctness, hallucination, bias, robustness);
+Support the automation of validation processes with AI tools;
+Take part in preparing validation reports and working documents;
+Comply with confidentiality and information security requirements.
+
+What we offer
+Gain practical experience by taking part in real projects and tasks;
+Learn from professional specialists and apply your knowledge in practice;
+Develop teamwork, communication and problem-solving skills;
+Get to know a corporate working environment closely and define your career interests;
+Join the Bir ecosystem's talent pool for future career opportunities.
+
+About us
+Bir is the first fully integrated ecosystem in the Caucasus, bringing together banking, payments, e-commerce and innovative digital services to make everyday life in Azerbaijan more convenient and accessible.
+
+By uniting key brands such as Birbank, Birmarket, m10, Milliön and Future Lab under one umbrella, the Bir ecosystem plays a leading role in the development of financial services, digital payments, e-commerce and innovation in Azerbaijan.
+
+Working here means creating value with technology, bringing real benefit to millions of people and building the solutions of the future today. In the Bir ecosystem, ideas turn into real products, and its different businesses and fields create broad opportunities to learn, grow and build your career in the direction you want.

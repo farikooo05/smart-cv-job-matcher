@@ -1,38 +1,72 @@
+"""Request and response models for the HTTP API, plus the shapes the LLM must return."""
+
+from __future__ import annotations
+
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-
+MAX_DOCUMENT_CHARS = 30_000
 MAX_REQUIREMENTS = 20
 
+Importance = Literal["required", "preferred"]
+Category = Literal["skill", "experience", "education", "language", "certification", "soft_skill", "other"]
+Status = Literal["matched", "missing"]
+
+
+# --- What the model returns (validated before any of it is used) ---------------------------
+
+class LlmRequirement(BaseModel):
+    jobEvidence: str
+    requirement: str
+    importance: Importance
+    category: Category
+
+
+class LlmRequirements(BaseModel):
+    title: str = ""
+    company: str = ""
+    requirements: list[LlmRequirement]
+
+
+class LlmAssessment(BaseModel):
+    id: int
+    cvEvidence: str = ""
+    status: Status
+    advice: str = ""
+
+
+class LlmAssessments(BaseModel):
+    assessments: list[LlmAssessment]
+    cvKeywords: list[str] = []
+
+
+class LlmSkill(BaseModel):
+    source: str
+    en: str
+    az: str = ""
+    ru: str = ""
+
+
+class LlmProfile(BaseModel):
+    fullName: str = ""
+    skills: list[LlmSkill]
+    summary: str = ""
+
+
+# --- /analyze --------------------------------------------------------------------------------
 
 class AnalyzeRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
-    cv_text: str = Field(min_length=1, max_length=30_000)
-    job_description: str = Field(min_length=1, max_length=30_000)
+    cv_text: str = Field(min_length=1, max_length=MAX_DOCUMENT_CHARS)
+    job_description: str = Field(min_length=1, max_length=MAX_DOCUMENT_CHARS)
 
 
 class JobInfo(BaseModel):
     title: str
     company: str
     date: str
-
-
-class RequirementAssessment(BaseModel):
-    requirement: str = Field(min_length=1, max_length=160)
-    status: Literal["matched", "missing"]
-    jobEvidence: str
-    cvEvidence: str
-
-
-class GeminiAssessmentResponse(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    job: JobInfo
-    cvKeywords: list[str] = Field(max_length=30)
-    jdKeywords: list[str] = Field(max_length=30)
-    requirementAssessments: list[RequirementAssessment] = Field(max_length=MAX_REQUIREMENTS)
 
 
 class SkillSummary(BaseModel):
@@ -48,6 +82,32 @@ class Suggestion(BaseModel):
     actionUrl: str
 
 
+class RequirementResult(BaseModel):
+    requirement: str
+    importance: Importance
+    category: Category
+    status: Status
+    jobEvidence: str
+    cvEvidence: str
+    advice: str
+
+
+class AnalysisMeta(BaseModel):
+    requestId: str = ""
+    model: str = ""
+    promptVersion: str = ""
+    latencyMs: int = 0
+    promptTokens: int = 0
+    outputTokens: int = 0
+    cached: bool = False
+    # Quality signals from the guardrails, also written to the pipeline_runs table.
+    droppedRequirements: int = 0
+    unverifiedQuotes: int = 0
+    unassessedRequirements: int = 0
+    piiRedactions: int = 0
+    warnings: list[str] = []
+
+
 class AnalysisResponse(BaseModel):
     job: JobInfo
     compatibilityScore: int = Field(ge=0, le=100)
@@ -58,37 +118,74 @@ class AnalysisResponse(BaseModel):
     missingRequirements: list[str]
     suggestions: list[Suggestion]
     summary: str
+    requirements: list[RequirementResult] = []
+    meta: AnalysisMeta = AnalysisMeta()
 
 
-class IndexResumeRequest(BaseModel):
-    user_id: str = Field(min_length=1, max_length=128)
-    cv_text: str = Field(min_length=1, max_length=30_000)
+# --- /profile --------------------------------------------------------------------------------
+
+class ProfileRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    cv_text: str = Field(min_length=1, max_length=MAX_DOCUMENT_CHARS)
 
 
-class IndexResumeResponse(BaseModel):
-    indexed_chunks: int = Field(ge=0)
+class MultilingualSkill(BaseModel):
+    en: str
+    az: str
+    ru: str
+
+
+class ProfileResponse(BaseModel):
+    fullName: str
+    keywords: list[str]
+    multilingualSkills: list[MultilingualSkill]
+    summary: str
+    # The CV text after cleaning and contact-detail removal; this is what the backend stores.
+    parsedText: str
+    meta: AnalysisMeta = AnalysisMeta()
+
+
+# --- /jobs -----------------------------------------------------------------------------------
+
+class JobDocument(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    job_id: str = Field(min_length=1, max_length=128)
+    title: str = Field(min_length=1, max_length=300)
+    company: str = Field(default="", max_length=300)
+    location: str = Field(default="", max_length=300)
+    description: str = Field(default="", max_length=MAX_DOCUMENT_CHARS)
+
+
+class IndexJobsRequest(BaseModel):
+    jobs: list[JobDocument] = Field(min_length=1, max_length=500)
+
+
+class IndexJobsResponse(BaseModel):
+    embedded: int = Field(ge=0)
+    unchanged: int = Field(ge=0)
     embedding_model: str
 
 
-class SearchResumeRequest(BaseModel):
-    user_id: str = Field(min_length=1, max_length=128)
-    requirements: list[str] = Field(min_length=1, max_length=10)
-    top_k: int = Field(default=4, ge=1, le=10)
+class SearchJobsRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
 
-    @field_validator("requirements")
-    @classmethod
-    def validate_requirements(cls, requirements: list[str]) -> list[str]:
-        if any(not item.strip() or len(item) > 300 for item in requirements):
-            raise ValueError("Each requirement must contain 1 to 300 characters.")
-        return [item.strip() for item in requirements]
+    query_text: str = Field(min_length=1, max_length=MAX_DOCUMENT_CHARS)
+    top_k: int | None = Field(default=None, ge=1, le=50)
+    min_similarity: float | None = Field(default=None, ge=-1, le=1)
+    job_ids: list[str] | None = Field(default=None, max_length=5000)
 
 
-class RetrievedChunk(BaseModel):
-    chunk_id: int
-    section: str
-    text: str
-    similarity: float = Field(ge=-1, le=1)
+class JobHit(BaseModel):
+    job_id: str
+    similarity: float
+    # Other indexed jobs judged to be the same vacancy (same title and company, or near-identical vector).
+    duplicate_job_ids: list[str] = []
 
 
-class SearchResumeResponse(BaseModel):
-    results: dict[str, list[RetrievedChunk]]
+class SearchJobsResponse(BaseModel):
+    results: list[JobHit]
+    top_k: int
+    candidates_considered: int
+    duplicates_collapsed: int

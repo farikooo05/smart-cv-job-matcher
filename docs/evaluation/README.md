@@ -1,29 +1,89 @@
-# OptiJob evaluation benchmark
+# OptiJob evaluation
 
-Run the same small, human-labeled set of synthetic CV/job-description pairs through Gemini and Ollama. The examples cover explicit evidence, common equivalent terms, unsupported/aspirational mentions, and missing domain experience. No real CV or personal data is included.
+How the AI pipeline is tested, what the datasets contain, and how to reproduce the numbers in the main README.
 
-From the `backend` directory, with the AI service and Ollama already running:
+All files are in [backend/ai-service/evaluation](../../backend/ai-service/evaluation).
+
+## Datasets
+
+### Analysis: `golden/analysis.json`
+
+26 CV and vacancy pairs with 185 labelled requirements.
+
+| Group | Cases | What it checks |
+| --- | ---: | --- |
+| Real pair | 2 | One real CV (contact details removed) against one real vacancy, in English and in the original Azerbaijani |
+| Technical roles | 9 | Direct evidence, equivalent terms, seniority and degree levels |
+| Non-technical roles | 8 | Accounting, marketing, sales, teaching, engineering, support |
+| Other languages | 4 | Russian and Azerbaijani CVs and vacancies, including a CV and a vacancy in different languages |
+| Prompt injection | 2 | Instructions to the model hidden in a CV and in a vacancy |
+| Edge cases | 3 | Contact details in the CV, a vacancy with no requirements, many nice-to-have items |
+
+Each requirement has:
+
+- `expected`: `matched` or `missing`
+- `importance` and `category`: used for the weighted score
+- `jobEvidence`: the vacancy phrase that states it
+- `cvEvidence`: for matched items, the CV phrase that proves it
+- `pattern`: a regular expression that recognises this requirement in the model's own list
+
+A unit test ([tests/test_golden_dataset.py](../../backend/ai-service/tests/test_golden_dataset.py)) checks that every labelled quote really exists in its source text, so a typo in a label cannot silently change the metrics.
+
+**Labelling rules**
+
+- Matched: the CV states the skill, or states something that directly implies it (a product for its category, a library for its language, an equal or higher level).
+- Missing: no evidence, only a wish or plan, an explicit negation, a level below the requirement, or an amount of experience the CV does not let you work out.
+- Compound requirements are separate items. "X or Y" alternatives stay one item.
+- Soft skills are matched only when the CV names them.
+
+**Dev and test split.** Prompts were tuned only on the 8 cases listed under `dev_cases`. The other 18 cases are the held-out test set: they were run only to report results. The report gives both.
+
+**Who wrote the labels.** The synthetic cases and all labels were drafted with an AI assistant and follow the rules above. They should be reviewed by a person before the numbers are quoted as ground truth.
+
+### Retrieval: `golden/retrieval.json`
+
+31 job postings in English, Azerbaijani and Russian, including 3 re-posted duplicates, and 12 candidate profiles with the jobs that are relevant to each.
+
+## What is measured
+
+| Suite | Question | Metrics |
+| --- | --- | --- |
+| `analysis`: evidence check | Given the correct requirement list, does the model decide matched or missing correctly? | Accuracy, precision, recall, F1; share of quotes that are verbatim CV text |
+| `analysis`: extraction | Does the model find the requirements in the vacancy? | Coverage of labelled requirements, agreement on required or nice-to-have, share of verbatim vacancy quotes |
+| `analysis`: end to end | With the model's own requirement list, is the final result right? | Requirement-level accuracy; mean absolute error of the 0-100 score |
+| `retrieval` | Does vector search find the right jobs for a profile? | Recall@k, MRR, duplicate results in the top 5 before and after collapsing |
+| `sampling` | What do temperature and top-k change? | Accuracy and the share of verdicts that stay the same across repeated runs |
+
+"Matched" is the positive class: precision falls when the model claims a match that is not there, recall falls when it misses a real match.
+
+## Run it
+
+From `backend/ai-service`, with `GEMINI_API_KEY` set in `backend/.env`:
 
 ```powershell
-npx tsx evaluation/benchmark.ts
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt -r requirements-dev.txt
+
+.venv\Scripts\python -m pytest                             # unit tests, no network
+.venv\Scripts\python -m evaluation.run_eval analysis       # about 80 model calls
+.venv\Scripts\python -m evaluation.run_eval retrieval      # 3 embedding calls
+.venv\Scripts\python -m evaluation.run_eval sampling --limit 12
 ```
 
-The paired run uses all five examples for both providers and allows up to 30 minutes per Ollama request. Explicitly set these values, especially if benchmark variables were set in the current PowerShell window earlier:
+Useful options:
 
-```powershell
-$env:BENCHMARK_PROVIDER = "both"
-$env:BENCHMARK_CASE_LIMIT = "5"
-$env:BENCHMARK_OLLAMA_TIMEOUT_SECONDS = "1800"
-npx tsx evaluation/benchmark.ts
-Remove-Item Env:BENCHMARK_PROVIDER, Env:BENCHMARK_CASE_LIMIT, Env:BENCHMARK_OLLAMA_TIMEOUT_SECONDS
-```
+- `--model gemini-3.8-flash`: evaluate another model; the report is saved as `results/analysis-<model>.json`
+- `--split dev` or `--split test`: one part of the dataset
+- `--rpm 15`: request budget per minute
+- `--no-cache`: ignore the on-disk response cache
 
-To run only Ollama, set `BENCHMARK_PROVIDER` to `ollama`; use `gemini` to run only Gemini. Ollama generation is capped at 400 tokens for the benchmark process, without changing the application's `.env`.
+Reports are written to `evaluation/results/`. Each report records the model version, the sampling settings and the prompt versions, and lists every disagreement with the labels for error analysis.
 
-Gemini uses the configured AI service at `AI_SERVICE_URL` (default `http://127.0.0.1:8000`). Ollama uses the configured model and the application's analysis function. The Ollama benchmark supplies each synthetic CV as one retrieved excerpt, so it measures analysis and evidence handling, not pgvector retrieval quality.
+Responses are cached in `evaluation/.cache/` (not committed), so an interrupted run continues where it stopped. Latency in a report comes only from calls that really went to the API.
 
-By default, the runner uses the same five examples for both providers, allows up to 30 minutes per Ollama request, and limits Ollama output to 400 tokens for this benchmark process only; it does not change the application's `.env`. Set `BENCHMARK_CASE_LIMIT` to change the sample count, `BENCHMARK_PROVIDER=gemini|ollama` to select one provider, or `BENCHMARK_OLLAMA_NUM_PREDICT` to change the benchmark-only Ollama output limit. The runner prints progress for every case.
+## Limits of these results
 
-The recorded paired run completed all five examples on both providers (55 labeled decisions each). Gemini (`configured AI service model`) scored 87.3% accuracy, 82.1% precision, 100% recall, and 90.1% F1 at 2.40 seconds mean latency. Ollama (`qwen3:4b`) scored 54.5% accuracy, 58.5% precision, 75% recall, and 65.8% F1 at 22.16 seconds mean latency. Both had 100% exact-quote validity; requirement coverage was 100% for Gemini and 92.7% for Ollama.
-
-These results are a small synthetic smoke benchmark, not enough to claim general model accuracy on real résumés. Expand and manually review the labeled examples before publishing broad quality claims. The displayed CV-job match percentage is not model accuracy, and R² is not an appropriate metric for this classification task.
+- The dataset is small and mostly synthetic. One real CV is not enough to claim accuracy on real CVs in general.
+- Synthetic CVs are short and clean. Real CVs are longer and messier, and PDF text extraction adds its own errors.
+- The retrieval set has 31 jobs. Finding the right job among 31 is much easier than among thousands.
+- The score shown to users (CV and vacancy match) is not model accuracy. They are different numbers.

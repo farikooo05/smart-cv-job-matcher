@@ -1,0 +1,50 @@
+{
+  "suite": "retrieval",
+  "run_at": "2026-11-14T12:07:16+00:00",
+  "embedding_model": "gemini-embedding-2",
+  "embedding_dimensions": 768,
+  "duplicate_similarity": 0.97,
+  "jobs": 31,
+  "duplicate_postings": 3,
+  "queries": 12,
+  "modes": {
+    "title and description": {
+      "recall@1": 0.75,
+      "recall@3": 0.9167,
+      "recall@5": 1.0,
+      "recall@10": 1.0,
+      "mrr": 1.0,
+      "duplicate_results_in_top5_before_collapse": 4,
+      "duplicate_results_in_top5_after_collapse": 0,
+      "relevant_similarity_min": 0.728,
+      "relevant_similarity_mean": 0.792,
+      "other_similarity_mean": 0.643,
+      "other_similarity_max": 0.788
+    },
+    "title only": {
+      "recall@1": 0.75,
+      "recall@3": 0.875,
+      "recall@5": 0.9583,
+      "recall@10": 1.0,
+      "mrr": 1.0,
+      "duplicate_results_in_top5_before_collapse": 9,
+      "duplicate_results_in_top5_after_collapse": 0,
+      "relevant_similarity_min": 0.658,
+      "relevant_similarity_mean": 0.731,
+      "other_similarity_mean": 0.598,
+      "other_similarity_max": 0.741
+    }
+  },
+  "calls": {
+    "embed": {
+      "live_calls": 3,
+      "cached_calls": 0,
+      "failed_calls": 0,
+      "retries": 0,
+      "mean_latency_s": 1.66,
+      "p95_latency_s": 2.48,
+      "mean_prompt_tokens": 586,
+      "mean_output_tokens": 0
+    }
+  }
+}

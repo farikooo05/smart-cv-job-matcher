@@ -1,0 +1,53 @@
+Education
+French-Azerbaijani University (UFAZ), Baku, Azerbaijan
+Bachelor of Science in Computer Science, 4/4 Year, Sept 2023 – May 2027
+
+Certifications
+Machine Learning Specialization, Jul 2026
+Stanford Online & DeepLearning.AI (Andrew Ng), via Coursera
+– Supervised Machine Learning: Regression and Classification
+– Advanced Learning Algorithms
+– Unsupervised Learning, Recommenders, Reinforcement Learning
+Deep Learning Specialization, Jul – Aug 2026
+DeepLearning.AI (Andrew Ng), via Coursera
+– Neural Networks and Deep Learning
+– Improving Deep Neural Networks: Hyperparameter Tuning, Regularization and Optimization
+– Structuring Machine Learning Projects
+– Convolutional Neural Networks
+Digital LevelUP – Data Science, Aug – Dec 2025
+StrategEast IT Hub & Oracle University (via Oracle MyLearn), 4-month mentor-driven program
+
+Projects
+Smart CV Job Matcher | Python, FastAPI, Gemini, Ollama, RAG, embeddings, pgvector, Pydantic, Docker Compose
+– Developed an AI-powered tool that compares a CV with a job description, identifies matching and missing skills, and returns an overall match score
+– Built a retrieval-augmented analysis pipeline using embeddings and pgvector to retrieve relevant CV passages for job requirements
+– Integrated Gemini and a local Ollama model through a FastAPI AI service
+– Validated structured LLM responses with Pydantic and grounded skill assessments in CV excerpts, reporting unsupported requirements as missing
+House Price Prediction | Python, pandas, NumPy, scikit-learn, matplotlib, seaborn
+– Built a regression workflow for predicting Baku apartment prices using real estate listing data, including data cleaning, feature engineering, outlier filtering, and leakage prevention
+– Compared Linear Regression, Random Forest, Extra Trees, Gradient Boosting, and HistGradientBoosting; best model achieved about 0.89 R2 and 9.01% MAPE on the test set
+Spam Email Detector | Python, pandas, scikit-learn, NLTK
+– Built an NLP spam classification pipeline using text cleaning, stopword removal, TF-IDF vectorization, and additional text-based features
+– Compared Multinomial Naive Bayes and Logistic Regression; final Logistic Regression model achieved 97.76% accuracy and 0.92 spam F1-score
+DrivingExperiencePROJECT | PHP, MySQL, HTML, CSS
+– Built a full-stack web application for managing supervised driving experience records
+– Designed relational database schema and implemented backend logic with PHP
+
+Skills
+LLM & RAG: RAG, embeddings, vector search (pgvector), prompt engineering, structured outputs, LLM integration (Gemini API, Ollama), LLM evaluation
+Data Science & ML: Python, pandas, NumPy, scikit-learn, NLTK, TF-IDF, data cleaning, exploratory data analysis, feature engineering, classification, regression, model evaluation, matplotlib, seaborn
+Deep Learning: Neural Networks, CNNs, hyperparameter tuning, regularization, bias-variance tradeoff, TensorFlow/Keras, basic knowledge of Sequence Models (RNNs) and LLM concepts
+Mathematics: Linear Algebra, Calculus, Probability & Statistics
+Web Development: React, HTML, CSS, PHP
+Databases: PostgreSQL, pgvector, SQL, Prisma, MySQL
+Tools: Git, Jupyter Notebook, Microsoft Excel, Microsoft Azure (basic: virtual machines), Docker Compose
+
+Achievements & Activities
+Participant: ICPC 2024 Azerbaijan
+Volunteer: ICPC 2025 Azerbaijan – routed participants to rooms and managed event order during the contest.
+
+Soft Skills
+Analytical thinking and attention to detail | Responsible team member with strong communication skills
+
+Languages
+Azerbaijani: Native | Russian: Native | English: C1 | French: A1

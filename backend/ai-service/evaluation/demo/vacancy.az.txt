@@ -1,0 +1,33 @@
+Vakansiya haqqında
+Bu təcrübəçi rolu kredit riski, IFRS 9, Machine Learning və Gen AI modellərinin validasiyası prosesində iştirak etməyi, məlumatların hazırlanması və keyfiyyətinin yoxlanılmasını əhatə edir. Namizədlərdən Python, SQL, statistika və maşın öyrənməsinin əsasları, həmçinin Gen AI, LLM, RAG və AI agentləri haqqında anlayış gözlənilir.
+
+Tələblər
+Riyaziyyat, statistika, kompüter elmləri, data elmi və ya oxşar ixtisas üzrə ali təhsil (son kurs tələbəsi, məzun və ya magistrant)
+Python və SQL bilikləri, statistika və maşın öyrənməsinin əsasları
+Gen AI və LLM əsaslı həllər haqqında anlayış (prompt yazma, RAG, AI agentləri), praktiki təcrübə üstünlükdür
+İngilis dili: texniki ədəbiyyatı oxumaq və sənəd hazırlamaq səviyyəsində
+Analitik və tənqidi düşüncə, detallara diqqət
+Sürətli öyrənmə bacarığı, məsuliyyətlilik və komandada işləmək bacarığı
+
+Öhdəliklər
+Modellərin (kredit riski, IFRS 9, ML və Gen AI modelləri) müstəqil validasiyası işlərində validatorlara dəstək göstərmək;
+Validasiya üçün məlumatların hazırlanmasını, keyfiyyətinin yoxlanılmasını və ilkin təhlilini aparmaq;
+Validasiya testlərini (diskriminasiya gücü, kalibrasiya, stabillik, backtesting) Python və SQL vasitəsilə icra etmək;
+AI/Gen AI modellərinin və AI agentlərinin test edilməsində iştirak etmək (cavabların düzgünlüyü, hallüsinasiya, qərəzlilik, dayanıqlıq);
+Validasiya proseslərinin AI alətləri ilə avtomatlaşdırılmasına dəstək göstərmək;
+Validasiya hesabatlarının və işçi sənədlərinin hazırlanmasında iştirak etmək;
+Məxfilik və informasiya təhlükəsizliyi tələblərinə riayət etmək.
+
+Təklif olunanlar
+Real layihə və tapşırıqlarda iştirak edərək praktiki təcrübə qazanmaq;
+Peşəkar mütəxəssislərdən öyrənmək və biliklərini təcrübədə tətbiq etmək;
+Komanda işi, ünsiyyət və problem həlli bacarıqlarını inkişaf etdirmək;
+Korporativ iş mühitini yaxından tanımaq və karyera maraqlarını müəyyənləşdirmək;
+Gələcək karyera imkanları üçün Bir ekosisteminin istedad hovuzuna daxil olmaq.
+
+Haqqımızda
+Bir Azərbaycanda gündəlik həyatı daha rahat və əlçatan etmək məqsədilə bankçılıq, ödənişlər, e-ticarət və innovativ rəqəmsal xidmətləri bir araya gətirən Qafqazın ilk tam inteqrasiya olunmuş ekosistemidir.
+
+Bir ekosistemi Birbank, Birmarket, m10, Milliön və Future Lab kimi əsas brendləri vahid çətir altında birləşdirərək Azərbaycanın maliyyə xidmətləri, rəqəmsal ödənişlər, e-ticarət və innovasiya sahələrinin inkişafında aparıcı rol oynayır.
+
+Burada işləmək texnologiya ilə dəyər yaratmaq, milyonlarla insana real fayda vermək və gələcəyin həllərini bu gündən qurmaqdır. Bir ekosistemində ideyalar real məhsullara çevrilir, fərqli biznes və sahələr isə öyrənmək, inkişaf etmək və karyeranı istədiyin istiqamətdə qurmaq üçün geniş fürsətlər yaradır.

@@ -5,10 +5,17 @@ services:
     restart: unless-stopped
     environment:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-lite-latest}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GEMINI_FALLBACK_MODEL: ${GEMINI_FALLBACK_MODEL:-gemini-3.1-flash-lite}
+      GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-2}
+      GEMINI_TEMPERATURE: ${GEMINI_TEMPERATURE:-0}
+      GEMINI_TOP_P: ${GEMINI_TOP_P:-}
+      GEMINI_TOP_K: ${GEMINI_TOP_K:-}
+      GEMINI_REQUESTS_PER_MINUTE: ${GEMINI_REQUESTS_PER_MINUTE:-10}
+      RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-10}
+      RETRIEVAL_DUPLICATE_SIMILARITY: ${RETRIEVAL_DUPLICATE_SIMILARITY:-0.97}
+      AI_SERVICE_KEY: ${AI_SERVICE_KEY:-}
       DATABASE_URL: postgresql://postgres:local_dev_password@db:5432/cv_matcher
-      OLLAMA_EMBEDDING_URL: ${OLLAMA_EMBEDDING_URL:-http://host.docker.internal:11434}
-      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-bge-m3}
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:
